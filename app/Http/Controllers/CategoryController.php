@@ -19,7 +19,7 @@ class CategoryController extends Controller
             ->orderBy('order')
             ->paginate(10);
 
-        return Inertia::render('Admin/Categories/Index', [
+        return Inertia::render('admin/categories/index', [
             'categories' => $categories
         ]);
     }
@@ -34,7 +34,7 @@ class CategoryController extends Controller
             ->orderBy('name')
             ->get();
 
-        return Inertia::render('Admin/Categories/Create', [
+        return Inertia::render('admin/categories/create', [
             'parentCategories' => $parentCategories
         ]);
     }
@@ -87,7 +87,7 @@ class CategoryController extends Controller
     {
         $category->load(['parent', 'children', 'products']);
 
-        return Inertia::render('Admin/Categories/Show', [
+        return Inertia::render('admin/categories/show', [
             'category' => $category
         ]);
     }
@@ -103,7 +103,7 @@ class CategoryController extends Controller
             ->orderBy('name')
             ->get();
 
-        return Inertia::render('Admin/Categories/Edit', [
+        return Inertia::render('admin/categories/edit', [
             'category' => $category,
             'parentCategories' => $parentCategories
         ]);

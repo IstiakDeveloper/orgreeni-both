@@ -23,7 +23,7 @@ class ProductController extends Controller
             ->latest()
             ->paginate(10);
 
-        return Inertia::render('Admin/Products/Index', [
+        return Inertia::render('admin/products/index', [
             'products' => $products
         ]);
     }
@@ -37,7 +37,7 @@ class ProductController extends Controller
             ->orderBy('name')
             ->get();
 
-        return Inertia::render('Admin/Products/Create', [
+        return Inertia::render('admin/products/create', [
             'categories' => $categories
         ]);
     }
@@ -110,7 +110,7 @@ class ProductController extends Controller
     {
         $product->load(['category', 'images']);
 
-        return Inertia::render('Admin/Products/Show', [
+        return Inertia::render('admin/products/show', [
             'product' => $product
         ]);
     }
@@ -126,7 +126,7 @@ class ProductController extends Controller
 
         $product->load('images');
 
-        return Inertia::render('Admin/Products/Edit', [
+        return Inertia::render('admin/products/edit', [
             'product' => $product,
             'categories' => $categories
         ]);
@@ -279,7 +279,7 @@ class ProductController extends Controller
             ->take(4)
             ->get();
 
-        return Inertia::render('Shop/ProductDetails', [
+        return Inertia::render('shop/product-details', [
             'product' => $product,
             'relatedProducts' => $relatedProducts
         ]);
@@ -307,7 +307,7 @@ class ProductController extends Controller
             })
             ->paginate(20);
 
-        return Inertia::render('Shop/SearchResults', [
+        return Inertia::render('shop/search-results', [
             'products' => $products,
             'query' => $query,
         ]);

@@ -29,8 +29,8 @@ Route::get('/products', [HomeController::class, 'allProducts'])->name('products'
 Route::get('/page/{page}', [SettingController::class, 'getPage'])->name('page');
 
 // Product Routes
-Route::get('/product/{product:slug}', [ProductController::class, 'getProductDetails'])->name('product.details');
-Route::get('/category/{category:slug}', [CategoryController::class, 'getCategoryWithProducts'])->name('category.products');
+Route::get('/product/{product:id}', [ProductController::class, 'getProductDetails'])->name('product.details');
+Route::get('/category/{category:id}', [CategoryController::class, 'getCategoryWithProducts'])->name('category.products');
 Route::get('/search', [ProductController::class, 'searchProducts'])->name('product.search');
 
 // Cart Routes
