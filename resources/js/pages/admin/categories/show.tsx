@@ -1,363 +1,423 @@
-import React, { ChangeEvent, FormEventHandler, useState } from 'react';
-import { Head, Link, useForm, router } from '@inertiajs/react';
+import React, { useState } from 'react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
-  ArrowLeft,
-  AlertCircle,
-  Tag,
-  FileImage,
-  Hash,
-  AlignLeft,
-  CheckCircle,
-  FolderTree,
-  Save
+    ArrowLeft,
+    Edit,
+    Trash2,
+    Tag,
+    AlertTriangle,
+    Calendar,
+    Eye,
+    Clock,
+    CheckCircle,
+    XCircle,
+    Hash,
+    FolderTree,
+    AlignLeft,
+    Package,
+    ExternalLink,
+    FileImage
 } from 'lucide-react';
 import AdminLayout from '@/layouts/AdminLayout';
 
+interface Product {
+    id: number;
+    name: string;
+    slug: string;
+    thumbnail?: string | null;
+    price: number;
+    sale_price?: number | null;
+}
+
 interface Category {
-  id: number;
-  name: string;
-  slug: string;
-  description: string | null;
-  image: string | null;
-  parent_id: number | null;
-  order: number;
-  is_active: boolean;
+    id: number;
+    name: string;
+    slug: string;
+    description: string | null;
+    image: string | null;
+    parent_id: number | null;
+    order: number;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+    parent?: {
+        id: number;
+        name: string;
+    } | null;
+    children?: Category[];
+    products?: Product[];
 }
 
-interface ParentCategory {
-  id: number;
-  name: string;
+interface CategoryShowProps {
+    category: Category;
 }
 
-interface CategoryEditProps {
-  category: Category;
-  parentCategories: ParentCategory[];
-  errors: {
-    name?: string;
-    description?: string;
-    image?: string;
-    parent_id?: string;
-    order?: string;
-    is_active?: string;
-  };
-}
+const Show: React.FC<CategoryShowProps> = ({ category }) => {
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-const Edit: React.FC<CategoryEditProps> = ({ category, parentCategories, errors }) => {
-  const [imagePreview, setImagePreview] = useState<string | null>(
-    category.image ? `/storage/${category.image}` : null
-  );
+    const confirmDelete = () => {
+        setShowDeleteModal(true);
+    };
 
-  const { data, setData, post, processing } = useForm({
-    _method: 'PUT',
-    name: category.name || '',
-    description: category.description || '',
-    image: null as File | null,
-    parent_id: category.parent_id || '',
-    order: category.order || 0,
-    is_active: category.is_active,
-  });
+    const handleDelete = () => {
+        router.delete(route('admin.categories.destroy', category.id));
+        setShowDeleteModal(false);
+    };
 
-  const handleSubmit: FormEventHandler = (e) => {
-    e.preventDefault();
-    router.post(route('admin.categories.update', category.id), data);
-  };
+    const cancelDelete = () => {
+        setShowDeleteModal(false);
+    };
 
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setData('image', file);
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+        });
+    };
 
-      // Create preview URL
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setImagePreview(event.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+    const canDelete =
+        (!category.children || category.children.length === 0) &&
+        (!category.products || category.products.length === 0);
 
-  return (
-    <AdminLayout title={`Edit Category: ${category.name}`}>
-      <Head title={`Edit Category: ${category.name}`} />
+    return (
+        <AdminLayout title={`Category: ${category.name}`}>
+            <Head title={`Category: ${category.name}`} />
 
-      <div className="px-4 sm:px-6 lg:px-8">
-        <div className="mb-6">
-          <Link
-            href={route('admin.categories.index')}
-            className="inline-flex items-center text-sm font-medium text-emerald-600 hover:text-emerald-500"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to Categories
-          </Link>
-        </div>
+            <div className="px-4 sm:px-6 lg:px-8">
+                <div className="mb-6 flex justify-between items-center">
+                    <Link
+                        href={route('admin.categories.index')}
+                        className="inline-flex items-center text-sm font-medium text-emerald-600 hover:text-emerald-500"
+                    >
+                        <ArrowLeft className="h-4 w-4 mr-1" />
+                        Back to Categories
+                    </Link>
 
-        <div className="md:grid md:grid-cols-3 md:gap-6">
-          <div className="md:col-span-1">
-            <div className="px-4 sm:px-0">
-              <h3 className="text-lg font-medium leading-6 text-gray-900">Edit Category</h3>
-              <p className="mt-1 text-sm text-gray-600">
-                Update the details of your product category. Categories help organize your products and make them easier for customers to find.
-              </p>
-
-              <div className="mt-6 border-t border-gray-200 pt-4">
-                <dl className="sm:divide-y sm:divide-gray-200">
-                  <div className="py-2 sm:grid sm:grid-cols-3 sm:gap-4 sm:py-2">
-                    <dt className="text-sm font-medium text-gray-500">Current Slug</dt>
-                    <dd className="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">{category.slug}</dd>
-                  </div>
-                </dl>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-5 md:col-span-2 md:mt-0">
-            <form onSubmit={handleSubmit}>
-              <div className="shadow sm:overflow-hidden sm:rounded-md">
-                <div className="space-y-6 bg-white px-4 py-5 sm:p-6">
-                  {/* Basic Information */}
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-900 flex items-center">
-                      <Tag className="h-4 w-4 mr-2 text-emerald-600" />
-                      Basic Information
-                    </h3>
-                    <div className="mt-4 grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-                      {/* Name */}
-                      <div className="sm:col-span-4">
-                        <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                          Name <span className="text-red-500">*</span>
-                        </label>
-                        <div className="mt-1 relative rounded-md shadow-sm">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Tag className="h-5 w-5 text-gray-400" aria-hidden="true" />
-                          </div>
-                          <input
-                            type="text"
-                            id="name"
-                            name="name"
-                            required
-                            className={`block w-full rounded-md border-0 py-2 pl-10 pr-3 text-gray-900 shadow-sm ring-1 ring-inset ${
-                              errors?.name ? 'ring-red-300' : 'ring-gray-300'
-                            } placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-emerald-600 sm:text-sm sm:leading-6`}
-                            placeholder="Enter category name"
-                            value={data.name}
-                            onChange={(e) => setData('name', e.target.value)}
-                          />
-                        </div>
-                        {errors?.name && (
-                          <p className="mt-2 text-sm text-red-600" id="name-error">
-                            <AlertCircle className="h-4 w-4 inline mr-1" />
-                            {errors.name}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Order */}
-                      <div className="sm:col-span-2">
-                        <label htmlFor="order" className="block text-sm font-medium text-gray-700">
-                          Display Order
-                        </label>
-                        <div className="mt-1 relative rounded-md shadow-sm">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Hash className="h-5 w-5 text-gray-400" aria-hidden="true" />
-                          </div>
-                          <input
-                            type="number"
-                            id="order"
-                            name="order"
-                            min="0"
-                            className={`block w-full rounded-md border-0 py-2 pl-10 pr-3 text-gray-900 shadow-sm ring-1 ring-inset ${
-                              errors?.order ? 'ring-red-300' : 'ring-gray-300'
-                            } placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-emerald-600 sm:text-sm sm:leading-6`}
-                            value={data.order}
-                            onChange={(e) => setData('order', parseInt(e.target.value) || 0)}
-                          />
-                        </div>
-                        {errors?.order && (
-                          <p className="mt-2 text-sm text-red-600" id="order-error">
-                            <AlertCircle className="h-4 w-4 inline mr-1" />
-                            {errors.order}
-                          </p>
-                        )}
-                        <p className="mt-1 text-xs text-gray-500">Lower numbers appear first.</p>
-                      </div>
-
-                      {/* Parent Category */}
-                      <div className="sm:col-span-3">
-                        <label htmlFor="parent_id" className="block text-sm font-medium text-gray-700">
-                          Parent Category
-                        </label>
-                        <div className="mt-1 relative rounded-md shadow-sm">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <FolderTree className="h-5 w-5 text-gray-400" aria-hidden="true" />
-                          </div>
-                          <select
-                            id="parent_id"
-                            name="parent_id"
-                            className={`block w-full rounded-md border-0 py-2 pl-10 pr-3 text-gray-900 shadow-sm ring-1 ring-inset ${
-                              errors?.parent_id ? 'ring-red-300' : 'ring-gray-300'
-                            } focus:ring-2 focus:ring-inset focus:ring-emerald-600 sm:text-sm sm:leading-6`}
-                            value={data.parent_id}
-                            onChange={(e) => setData('parent_id', e.target.value)}
-                          >
-                            <option value="">None (Top-level category)</option>
-                            {parentCategories.map((parent) => (
-                              <option
-                                key={parent.id}
-                                value={parent.id}
-                                disabled={parent.id === category.id}
-                              >
-                                {parent.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        {errors?.parent_id && (
-                          <p className="mt-2 text-sm text-red-600" id="parent-error">
-                            <AlertCircle className="h-4 w-4 inline mr-1" />
-                            {errors.parent_id}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Active Status */}
-                      <div className="sm:col-span-3">
-                        <div className="flex items-start">
-                          <div className="flex h-6 items-center">
-                            <input
-                              id="is_active"
-                              name="is_active"
-                              type="checkbox"
-                              className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-600"
-                              checked={data.is_active}
-                              onChange={(e) => setData('is_active', e.target.checked)}
-                            />
-                          </div>
-                          <div className="ml-3 text-sm leading-6">
-                            <label htmlFor="is_active" className="font-medium text-gray-900">
-                              Active
-                            </label>
-                            <p className="text-gray-500">Make this category visible on the store.</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Description */}
-                      <div className="sm:col-span-6">
-                        <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                          Description
-                        </label>
-                        <div className="mt-1 relative rounded-md shadow-sm">
-                          <div className="absolute inset-y-0 left-0 pl-3 pt-2.5 flex items-start pointer-events-none">
-                            <AlignLeft className="h-5 w-5 text-gray-400" aria-hidden="true" />
-                          </div>
-                          <textarea
-                            id="description"
-                            name="description"
-                            rows={4}
-                            className={`block w-full rounded-md border-0 py-2 pl-10 pr-3 text-gray-900 shadow-sm ring-1 ring-inset ${
-                              errors?.description ? 'ring-red-300' : 'ring-gray-300'
-                            } placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-emerald-600 sm:text-sm sm:leading-6`}
-                            placeholder="Enter category description (optional)"
-                            value={data.description || ''}
-                            onChange={(e) => setData('description', e.target.value)}
-                          />
-                        </div>
-                        {errors?.description && (
-                          <p className="mt-2 text-sm text-red-600" id="description-error">
-                            <AlertCircle className="h-4 w-4 inline mr-1" />
-                            {errors.description}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Image */}
-                      <div className="sm:col-span-6">
-                        <label htmlFor="image" className="block text-sm font-medium text-gray-700">
-                          Category Image
-                        </label>
-                        <div className="mt-1 flex items-center">
-                          <div className="w-full flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                            <div className="space-y-1 text-center">
-                              {imagePreview ? (
-                                <div className="mb-4">
-                                  <img
-                                    src={imagePreview}
-                                    alt="Preview"
-                                    className="mx-auto h-32 w-32 object-cover rounded-md"
-                                  />
-                                </div>
-                              ) : (
-                                <FileImage className="mx-auto h-12 w-12 text-gray-400" aria-hidden="true" />
-                              )}
-                              <div className="flex text-sm text-gray-600 justify-center">
-                                <label
-                                  htmlFor="image-upload"
-                                  className="relative cursor-pointer rounded-md bg-white font-medium text-emerald-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-emerald-500 focus-within:ring-offset-2 hover:text-emerald-500"
-                                >
-                                  <span>{category.image ? 'Change image' : 'Upload a file'}</span>
-                                  <input
-                                    id="image-upload"
-                                    name="image-upload"
-                                    type="file"
-                                    className="sr-only"
-                                    accept="image/*"
-                                    onChange={handleImageChange}
-                                  />
-                                </label>
-                                <p className="pl-1">or drag and drop</p>
-                              </div>
-                              <p className="text-xs text-gray-500">PNG, JPG, GIF up to 2MB</p>
-                            </div>
-                          </div>
-                        </div>
-                        {errors?.image && (
-                          <p className="mt-2 text-sm text-red-600" id="image-error">
-                            <AlertCircle className="h-4 w-4 inline mr-1" />
-                            {errors.image}
-                          </p>
-                        )}
-                      </div>
+                    <div className="flex space-x-2">
+                        <Link
+                            href={route('admin.categories.edit', category.id)}
+                            className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600"
+                        >
+                            <Edit className="h-4 w-4 mr-1" />
+                            Edit
+                        </Link>
+                        <button
+                            onClick={confirmDelete}
+                            disabled={!canDelete}
+                            className={`inline-flex items-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600 ${!canDelete ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
+                            title={!canDelete ? "Cannot delete categories with subcategories or products" : "Delete category"}
+                        >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Delete
+                        </button>
                     </div>
-                  </div>
                 </div>
 
-                <div className="bg-gray-50 px-4 py-3 text-right sm:px-6">
-                  <Link
-                    href={route('admin.categories.index')}
-                    className="inline-flex justify-center rounded-md bg-white py-2 px-4 text-sm font-medium text-gray-700 shadow-sm border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
-                  >
-                    Cancel
-                  </Link>
-                  <button
-                    type="submit"
-                    disabled={processing}
-                    className="ml-3 inline-flex justify-center rounded-md border border-transparent bg-emerald-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50"
-                  >
-                    {processing ? (
-                      <>
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-4 w-4 mr-1" />
-                        Save Changes
-                      </>
-                    )}
-                  </button>
+                <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+                    <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
+                        <div>
+                            <h3 className="text-lg leading-6 font-medium text-gray-900">Category Details</h3>
+                            <p className="mt-1 max-w-2xl text-sm text-gray-500">Detailed information about this category.</p>
+                        </div>
+                        <div className="flex items-center">
+                            <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${category.is_active
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                {category.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                        </div>
+                    </div>
+                    <div className="border-t border-gray-200">
+                        <dl>
+                            <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                <dt className="text-sm font-medium text-gray-500 flex items-center">
+                                    <Tag className="h-5 w-5 mr-1 text-emerald-600" />
+                                    Name
+                                </dt>
+                                <dd className="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0 font-medium">
+                                    {category.name}
+                                </dd>
+                            </div>
+                            <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                <dt className="text-sm font-medium text-gray-500 flex items-center">
+                                    <Eye className="h-5 w-5 mr-1 text-emerald-600" />
+                                    Slug
+                                </dt>
+                                <dd className="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                                    {category.slug}
+                                </dd>
+                            </div>
+                            {category.parent && (
+                                <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                    <dt className="text-sm font-medium text-gray-500 flex items-center">
+                                        <FolderTree className="h-5 w-5 mr-1 text-emerald-600" />
+                                        Parent Category
+                                    </dt>
+                                    <dd className="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                                        <Link
+                                            href={route('admin.categories.show', category.parent.id)}
+                                            className="text-emerald-600 hover:text-emerald-500"
+                                        >
+                                            {category.parent.name}
+                                        </Link>
+                                    </dd>
+                                </div>
+                            )}
+                            <div className={`${category.parent ? 'bg-white' : 'bg-gray-50'} px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6`}>
+                                <dt className="text-sm font-medium text-gray-500 flex items-center">
+                                    <Hash className="h-5 w-5 mr-1 text-emerald-600" />
+                                    Display Order
+                                </dt>
+                                <dd className="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                                    {category.order}
+                                </dd>
+                            </div>
+                            <div className={`${category.parent ? 'bg-gray-50' : 'bg-white'} px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6`}>
+                                <dt className="text-sm font-medium text-gray-500 flex items-center">
+                                    <AlignLeft className="h-5 w-5 mr-1 text-emerald-600" />
+                                    Description
+                                </dt>
+                                <dd className="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                                    {category.description || <span className="text-gray-400 italic">No description provided</span>}
+                                </dd>
+                            </div>
+                            <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                <dt className="text-sm font-medium text-gray-500 flex items-center">
+                                    {category.is_active ? (
+                                        <CheckCircle className="h-5 w-5 mr-1 text-green-600" />
+                                    ) : (
+                                        <XCircle className="h-5 w-5 mr-1 text-red-600" />
+                                    )}
+                                    Status
+                                </dt>
+                                <dd className="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                                    {category.is_active ? 'Active' : 'Inactive'}
+                                </dd>
+                            </div>
+                            <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                <dt className="text-sm font-medium text-gray-500 flex items-center">
+                                    <Calendar className="h-5 w-5 mr-1 text-emerald-600" />
+                                    Created At
+                                </dt>
+                                <dd className="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                                    {formatDate(category.created_at)}
+                                </dd>
+                            </div>
+                            <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                <dt className="text-sm font-medium text-gray-500 flex items-center">
+                                    <Clock className="h-5 w-5 mr-1 text-emerald-600" />
+                                    Last Updated
+                                </dt>
+                                <dd className="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                                    {formatDate(category.updated_at)}
+                                </dd>
+                            </div>
+                            {category.image && (
+                                <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                    <dt className="text-sm font-medium text-gray-500 flex items-center">
+                                        <FileImage className="h-5 w-5 mr-1 text-emerald-600" />
+                                        Image
+                                    </dt>
+                                    <dd className="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                                        <img
+                                            src={`/storage/${category.image}`}
+                                            alt={category.name}
+                                            className="h-24 w-24 object-cover rounded-md border border-gray-200"
+                                        />
+                                    </dd>
+                                </div>
+                            )}
+                        </dl>
+                    </div>
                 </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    </AdminLayout>
-  );
+
+                {/* Subcategories Section */}
+                {category.children && category.children.length > 0 && (
+                    <div className="mt-8">
+                        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+                            <div className="px-4 py-5 sm:px-6">
+                                <h3 className="text-lg leading-6 font-medium text-gray-900 flex items-center">
+                                    <FolderTree className="h-5 w-5 mr-2 text-emerald-600" />
+                                    Subcategories
+                                    <span className="ml-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-full px-2">
+                                        {category.children.length}
+                                    </span>
+                                </h3>
+                            </div>
+                            <div className="border-t border-gray-200 px-4 py-5 sm:p-0">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+                                    {category.children.map((child) => (
+                                        <div key={child.id} className="border border-gray-200 rounded-md overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                                            <div className="p-4">
+                                                <div className="flex items-center">
+                                                    {child.image ? (
+                                                        <img
+                                                            src={`/storage/${child.image}`}
+                                                            alt={child.name}
+                                                            className="h-10 w-10 mr-3 rounded-md object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="h-10 w-10 mr-3 rounded-md bg-emerald-100 flex items-center justify-center">
+                                                            <Tag className="h-5 w-5 text-emerald-600" />
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <Link
+                                                            href={route('admin.categories.show', child.id)}
+                                                            className="font-medium text-emerald-600 hover:text-emerald-500"
+                                                        >
+                                                            {child.name}
+                                                        </Link>
+                                                        <p className="text-xs text-gray-500 mt-1">
+                                                            {child.is_active ? (
+                                                                <span className="text-green-600 flex items-center">
+                                                                    <CheckCircle className="h-3 w-3 mr-1" /> Active
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-gray-400 flex items-center">
+                                                                    <XCircle className="h-3 w-3 mr-1" /> Inactive
+                                                                </span>
+                                                            )}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Products Section */}
+                {category.products && category.products.length > 0 && (
+                    <div className="mt-8">
+                        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+                            <div className="px-4 py-5 sm:px-6">
+                                <h3 className="text-lg leading-6 font-medium text-gray-900 flex items-center">
+                                    <Package className="h-5 w-5 mr-2 text-emerald-600" />
+                                    Products in this Category
+                                    <span className="ml-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-full px-2">
+                                        {category.products.length}
+                                    </span>
+                                </h3>
+                            </div>
+                            <div className="border-t border-gray-200">
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Product
+                                                </th>
+                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Price
+                                                </th>
+                                                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Actions
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {category.products.map((product) => (
+                                                <tr key={product.id}>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="flex items-center">
+                                                            {product.thumbnail ? (
+                                                                <img
+                                                                    src={`/storage/${product.thumbnail}`}
+                                                                    alt={product.name}
+                                                                    className="h-10 w-10 rounded-md object-cover mr-3"
+                                                                />
+                                                            ) : (
+                                                                <div className="h-10 w-10 rounded-md bg-gray-100 flex items-center justify-center mr-3">
+                                                                    <Package className="h-5 w-5 text-gray-400" />
+                                                                </div>
+                                                            )}
+                                                            <div>
+                                                                <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                                                                <div className="text-sm text-gray-500">{product.slug}</div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="text-sm text-gray-900">
+                                                            ${product.price.toFixed(2)}
+                                                        </div>
+                                                        {product.sale_price && (
+                                                            <div className="text-sm text-red-600">
+                                                                Sale: ${product.sale_price.toFixed(2)}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                        <Link
+                                                            href={route('admin.products.edit', product.id)}
+                                                            className="text-indigo-600 hover:text-indigo-900 mr-3"
+                                                        >
+                                                            <Edit className="h-5 w-5 inline" />
+                                                        </Link>
+                                                        <Link
+                                                            href={route('admin.products.show', product.id)}
+                                                            className="text-blue-600 hover:text-blue-900"
+                                                        >
+                                                            <Eye className="h-5 w-5 inline" />
+                                                        </Link>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Delete Confirmation Modal */}
+                {showDeleteModal && (
+                    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity z-50 flex items-center justify-center">
+                        <div className="relative bg-white rounded-lg shadow-xl sm:max-w-md sm:w-full p-4">
+                            <div className="sm:flex sm:items-start">
+                                <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                                    <AlertTriangle className="h-6 w-6 text-red-600" aria-hidden="true" />
+                                </div>
+                                <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                                    <h3 className="text-lg font-medium leading-6 text-gray-900">Delete Category</h3>
+                                    <div className="mt-2">
+                                        <p className="text-sm text-gray-500">
+                                            Are you sure you want to delete the category "{category.name}"? This action cannot be undone.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                                <button
+                                    type="button"
+                                    className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto"
+                                    onClick={handleDelete}
+                                >
+                                    Delete
+                                </button>
+                                <button
+                                    type="button"
+                                    className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                                    onClick={cancelDelete}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </AdminLayout>
+    );
 };
 
-export default Edit;
+export default Show;
