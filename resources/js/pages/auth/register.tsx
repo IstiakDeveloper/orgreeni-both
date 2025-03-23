@@ -1,7 +1,7 @@
 import React, { FormEventHandler, useState, useEffect } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
-import GuestLayout from '@/layouts/GuestLayout';
+import GuestLayout from '@/layouts/ShopLayout';
 
 interface RegisterProps {
     errors: {

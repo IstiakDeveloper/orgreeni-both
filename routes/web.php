@@ -24,10 +24,18 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Frontend Routes
-Route::get('/', [HomeController::class, 'index'])->name('home');
-Route::get('/products', [HomeController::class, 'allProducts'])->name('products');
-Route::get('/page/{page}', [SettingController::class, 'getPage'])->name('page');
+// Route::get('/', [HomeController::class, 'index'])->name('home');
+// Route::get('/products', [HomeController::class, 'allProducts'])->name('products');
+// Route::get('/page/{page}', [SettingController::class, 'getPage'])->name('page');
 
+Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/category/{slug}', [HomeController::class, 'category'])->name('category.show');
+Route::get('/product/{slug}', [HomeController::class, 'product'])->name('product.show');
+Route::get('/search', [HomeController::class, 'search'])->name('search');
+Route::get('/products/featured', [HomeController::class, 'featuredProducts'])->name('products.featured');
+Route::get('/products/new', [HomeController::class, 'newArrivals'])->name('products.new');
+Route::get('/categories', [HomeController::class, 'allCategories'])->name('categories.all');
+Route::get('/offers', [HomeController::class, 'offers'])->name('offers');
 // Product Routes
 Route::get('/product/{product:id}', [ProductController::class, 'getProductDetails'])->name('product.details');
 Route::get('/category/{category:id}', [CategoryController::class, 'getCategoryWithProducts'])->name('category.products');

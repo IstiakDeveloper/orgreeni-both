@@ -17,7 +17,7 @@ class BannerController extends Controller
         $banners = Banner::orderBy('order')
             ->paginate(10);
 
-        return Inertia::render('Admin/Banners/Index', [
+        return Inertia::render('admin/banners/index', [
             'banners' => $banners
         ]);
     }
@@ -27,7 +27,7 @@ class BannerController extends Controller
      */
     public function create()
     {
-        return Inertia::render('Admin/Banners/Create');
+        return Inertia::render('admin/banners/create');
     }
 
     /**
@@ -62,7 +62,7 @@ class BannerController extends Controller
      */
     public function edit(Banner $banner)
     {
-        return Inertia::render('Admin/Banners/Edit', [
+        return Inertia::render('admin/banners/edit', [
             'banner' => $banner
         ]);
     }

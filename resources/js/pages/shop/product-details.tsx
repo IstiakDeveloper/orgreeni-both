@@ -125,7 +125,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, relatedProduct
               <li>
                 <div className="flex items-center">
                   <ChevronRight className="h-4 w-4 text-gray-400" />
-                  <Link href={route('shop')} className="ml-1 text-gray-700 hover:text-emerald-600 text-sm">
+                  <Link href="" className="ml-1 text-gray-700 hover:text-emerald-600 text-sm">
                     Shop
                   </Link>
                 </div>
@@ -134,7 +134,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, relatedProduct
                 <div className="flex items-center">
                   <ChevronRight className="h-4 w-4 text-gray-400" />
                   <Link
-                    href={route('shop.category', product.category.slug)}
+                    href=""
                     className="ml-1 text-gray-700 hover:text-emerald-600 text-sm"
                   >
                     {product.category.name}
@@ -220,7 +220,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, relatedProduct
           <div>
             <div className="border-b pb-4 mb-4">
               <Link
-                href={route('shop.category', product.category.slug)}
+                href=""
                 className="inline-flex items-center text-sm text-emerald-600 hover:text-emerald-700 mb-2"
               >
                 <Tag className="h-4 w-4 mr-1" />

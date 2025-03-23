@@ -16,7 +16,7 @@ class CouponController extends Controller
         $coupons = Coupon::latest()
             ->paginate(10);
 
-        return Inertia::render('Admin/Coupons/Index', [
+        return Inertia::render('admin/coupons/index', [
             'coupons' => $coupons
         ]);
     }
@@ -26,7 +26,7 @@ class CouponController extends Controller
      */
     public function create()
     {
-        return Inertia::render('Admin/Coupons/Create');
+        return Inertia::render('admin/coupons/create');
     }
 
     /**
@@ -71,7 +71,7 @@ class CouponController extends Controller
      */
     public function edit(Coupon $coupon)
     {
-        return Inertia::render('Admin/Coupons/Edit', [
+        return Inertia::render('admin/coupons/edit', [
             'coupon' => $coupon
         ]);
     }

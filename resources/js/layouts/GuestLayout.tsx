@@ -22,15 +22,15 @@ const GuestLayout: React.FC<GuestLayoutProps> = ({ children }) => {
           <div className="flex justify-between h-16 items-center">
             <div className="flex-shrink-0">
               <Link href="/" className="flex items-center">
-                {storeSettings.logo ? (
+                {storeSettings?.logo ? (
                   <img
                     className="h-8 w-auto"
-                    src={`/storage/${storeSettings.logo}`}
-                    alt={storeSettings.name}
+                    src={`/storage/${storeSettings?.logo}`}
+                    alt={storeSettings?.name}
                   />
                 ) : (
                   <span className="text-xl font-bold text-emerald-600">
-                    {storeSettings.name || 'Grocery Shop'}
+                    {storeSettings?.name || 'Grocery Shop'}
                   </span>
                 )}
               </Link>
@@ -60,7 +60,7 @@ const GuestLayout: React.FC<GuestLayoutProps> = ({ children }) => {
       <footer className="bg-white mt-auto">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <div className="text-center text-sm text-gray-500">
-            <p>© {new Date().getFullYear()} {storeSettings.name || 'Grocery Shop'}. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} {storeSettings?.name || 'Grocery Shop'}. All rights reserved.</p>
           </div>
         </div>
       </footer>

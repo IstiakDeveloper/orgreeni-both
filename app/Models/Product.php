@@ -30,6 +30,22 @@ class Product extends Model
         'is_active' => 'boolean',
     ];
 
+    /**
+     * Ensure special_price is properly cast when accessed
+     */
+    public function getSpecialPriceAttribute($value)
+    {
+        return $value !== null ? (float)$value : null;
+    }
+
+    /**
+     * Ensure price is always a float
+     */
+    public function getPriceAttribute($value)
+    {
+        return (float)$value;
+    }
+
     public function category()
     {
         return $this->belongsTo(Category::class);
@@ -57,9 +73,13 @@ class Product extends Model
 
     public function getMainImageAttribute()
     {
-        return $this->images()->where('is_primary', true)->first()?->image ?? 'default-product.jpg';
+        $primaryImage = $this->images()->where('is_primary', true)->first();
+        return $primaryImage ? $primaryImage->image : 'default-product.jpg';
     }
 
+    /**
+     * Using ID as the route key name
+     */
     public function getRouteKeyName()
     {
         return 'id';

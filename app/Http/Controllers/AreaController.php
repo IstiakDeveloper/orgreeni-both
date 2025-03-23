@@ -17,7 +17,7 @@ class AreaController extends Controller
             ->orderBy('name')
             ->paginate(15);
 
-        return Inertia::render('Admin/Areas/Index', [
+        return Inertia::render('admin/areas/index', [
             'areas' => $areas
         ]);
     }
@@ -27,7 +27,7 @@ class AreaController extends Controller
      */
     public function create()
     {
-        return Inertia::render('Admin/Areas/Create');
+        return Inertia::render('admin/areas/create');
     }
 
     /**
@@ -58,7 +58,7 @@ class AreaController extends Controller
      */
     public function edit(Area $area)
     {
-        return Inertia::render('Admin/Areas/Edit', [
+        return Inertia::render('admin/areas/edit', [
             'area' => $area
         ]);
     }

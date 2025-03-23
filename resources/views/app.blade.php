@@ -10,10 +10,10 @@
                 const appearance = '{{ $appearance ?? "system" }}';
 
                 if (appearance === 'system') {
-                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    const prefersDark = window.matchMedia('(prefers-color-scheme: light)').matches;
 
                     if (prefersDark) {
-                        document.documentElement.classList.add('dark');
+                        document.documentElement.classList.add('light');
                     }
                 }
             })();
@@ -27,6 +27,11 @@
 
             html.dark {
                 background-color: oklch(0.145 0 0);
+            }
+
+            /* Add Chaldal font family */
+            body {
+                font-family: 'Segoe UI', Helvetica, 'Droid Sans', Arial, 'lucida grande', tahoma, verdana, arial, sans-serif;
             }
         </style>
 

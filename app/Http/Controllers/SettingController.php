@@ -41,7 +41,7 @@ class SettingController extends Controller
             'shipping_policy' => Setting::get('shipping_policy', ''),
         ];
 
-        return Inertia::render('Admin/Settings/Index', [
+        return Inertia::render('admin/settings/index', [
             'settings' => $settings
         ]);
     }
@@ -165,7 +165,7 @@ class SettingController extends Controller
                 abort(404);
         }
 
-        return Inertia::render('Shop/StaticPage', [
+        return Inertia::render('shop/static-page', [
             'title' => $title,
             'content' => $content
         ]);

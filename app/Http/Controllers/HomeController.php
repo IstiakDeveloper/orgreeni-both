@@ -5,164 +5,163 @@ namespace App\Http\Controllers;
 use App\Models\Banner;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class HomeController extends Controller
 {
     /**
-     * Display the homepage.
+     * Display the home page
      */
     public function index()
     {
+        // Get featured categories (main categories only)
+        $categories = Category::where('is_active', true)
+            ->whereNull('parent_id')
+            ->orderBy('order')
+            ->with(['products' => function ($query) {
+                $query->where('is_active', true)
+                      ->with('images')
+                      ->take(10);
+            }])
+            ->take(10)
+            ->get();
+
+        // Get featured products
+        $featuredProducts = Product::where('is_active', true)
+            ->where('is_featured', true)
+            ->with('category')
+            ->with(['images' => function ($query) {
+                $query->where('is_primary', true);
+            }])
+            ->take(12)
+            ->get();
+
         // Get active banners
         $banners = Banner::where('is_active', true)
             ->orderBy('order')
             ->get();
 
-        // Get featured products
-        $featuredProducts = Product::with(['category', 'images' => function ($query) {
+        // Get latest products
+        $newArrivals = Product::where('is_active', true)
+            ->with('category')
+            ->with(['images' => function ($query) {
                 $query->where('is_primary', true);
             }])
-            ->where('is_active', true)
-            ->where('is_featured', true)
-            ->inRandomOrder()
-            ->take(8)
-            ->get();
-
-        // Get parent categories with their children
-        $categories = Category::with(['children' => function ($query) {
-                $query->where('is_active', true)
-                    ->orderBy('order');
-            }])
-            ->whereNull('parent_id')
-            ->where('is_active', true)
-            ->orderBy('order')
+            ->latest()
             ->take(10)
             ->get();
 
-        // Get new arrivals
-        $newArrivals = Product::with(['category', 'images' => function ($query) {
-                $query->where('is_primary', true);
-            }])
-            ->where('is_active', true)
-            ->latest()
-            ->take(8)
-            ->get();
+        // Get store settings
+        $storeSettings = [
+            'store_name' => Setting::get('store_name', 'My Grocery Store'),
+            'currency_symbol' => Setting::get('currency_symbol', '$'),
+        ];
 
-        return Inertia::render('Shop/Home', [
-            'banners' => $banners,
+        return Inertia::render('shop/home', [
+            'categories' => $categories,
             'featuredProducts' => $featuredProducts,
-            'categories' => $categories,
+            'banners' => $banners,
             'newArrivals' => $newArrivals,
+            'storeSettings' => $storeSettings,
         ]);
     }
 
     /**
-     * Display the all products page.
+     * Display products by category
      */
-    public function allProducts(Request $request)
+    public function category($slug)
     {
-        $query = Product::with(['category', 'images' => function ($query) {
+        $category = Category::where('slug', $slug)
+            ->where('is_active', true)
+            ->firstOrFail();
+
+        // Get all subcategories if any
+        $subcategories = Category::where('parent_id', $category->id)
+            ->where('is_active', true)
+            ->get();
+
+        // Get all products in this category
+        $products = Product::where('category_id', $category->id)
+            ->where('is_active', true)
+            ->with('category')
+            ->with(['images' => function ($query) {
                 $query->where('is_primary', true);
             }])
-            ->where('is_active', true);
+            ->paginate(24);
 
-        // Apply filters if present
-        if ($request->has('category')) {
-            $category = Category::where('slug', $request->category)->first();
-            if ($category) {
-                $query->where('category_id', $category->id);
-            }
-        }
+        $storeSettings = [
+            'store_name' => Setting::get('store_name', 'My Grocery Store'),
+            'currency_symbol' => Setting::get('currency_symbol', '$'),
+        ];
 
-        if ($request->has('sort')) {
-            switch ($request->sort) {
-                case 'price_low':
-                    $query->orderBy('special_price', 'asc')
-                        ->orderBy('price', 'asc');
-                    break;
-                case 'price_high':
-                    $query->orderBy('special_price', 'desc')
-                        ->orderBy('price', 'desc');
-                    break;
-                case 'name_asc':
-                    $query->orderBy('name', 'asc');
-                    break;
-                case 'name_desc':
-                    $query->orderBy('name', 'desc');
-                    break;
-                case 'newest':
-                    $query->latest();
-                    break;
-                default:
-                    $query->latest();
-            }
-        } else {
-            $query->latest();
-        }
-
-        $products = $query->paginate(24);
-
-        // Get all categories for filter sidebar
-        $categories = Category::where('is_active', true)
-            ->orderBy('name')
-            ->get();
-
-        return Inertia::render('Shop/AllProducts', [
+        return Inertia::render('shop/category', [
+            'category' => $category,
+            'subcategories' => $subcategories,
             'products' => $products,
-            'categories' => $categories,
-            'filters' => $request->only(['category', 'sort']),
+            'storeSettings' => $storeSettings,
         ]);
     }
 
     /**
-     * Display the admin dashboard.
+     * Display product details
      */
-    public function adminDashboard()
+    public function product($slug)
     {
-        // Get counts for dashboard widgets
-        $totalProducts = Product::count();
-        $activeProducts = Product::where('is_active', true)->count();
-        $lowStockProducts = Product::where('stock', '<', 10)->count();
-        $outOfStockProducts = Product::where('stock', 0)->count();
+        $product = Product::where('slug', $slug)
+            ->where('is_active', true)
+            ->with('category')
+            ->with('images')
+            ->firstOrFail();
 
-        // Get recent orders
-        $recentOrders = \App\Models\Order::with('user')
-            ->latest()
-            ->take(10)
+        // Get related products
+        $relatedProducts = Product::where('category_id', $product->category_id)
+            ->where('id', '!=', $product->id)
+            ->where('is_active', true)
+            ->with(['images' => function ($query) {
+                $query->where('is_primary', true);
+            }])
+            ->take(8)
             ->get();
 
-        // Get sales stats
-        $today = now()->startOfDay();
-        $thisMonth = now()->startOfMonth();
-        $thisYear = now()->startOfYear();
+        $storeSettings = [
+            'store_name' => Setting::get('store_name', 'My Grocery Store'),
+            'currency_symbol' => Setting::get('currency_symbol', '$'),
+        ];
 
-        $todaySales = \App\Models\Order::where('created_at', '>=', $today)->sum('total_amount');
-        $monthSales = \App\Models\Order::where('created_at', '>=', $thisMonth)->sum('total_amount');
-        $yearSales = \App\Models\Order::where('created_at', '>=', $thisYear)->sum('total_amount');
+        return Inertia::render('shop/product', [
+            'product' => $product,
+            'relatedProducts' => $relatedProducts,
+            'storeSettings' => $storeSettings,
+        ]);
+    }
 
-        // Get order status counts
-        $pendingOrders = \App\Models\Order::where('order_status', 'pending')->count();
-        $processingOrders = \App\Models\Order::where('order_status', 'processing')->count();
-        $shippedOrders = \App\Models\Order::where('order_status', 'shipped')->count();
-        $deliveredOrders = \App\Models\Order::where('order_status', 'delivered')->count();
+    /**
+     * Search products
+     */
+    public function search(Request $request)
+    {
+        $query = $request->input('q');
 
-        return Inertia::render('admin/dashboard', [
-            'stats' => [
-                'totalProducts' => $totalProducts,
-                'activeProducts' => $activeProducts,
-                'lowStockProducts' => $lowStockProducts,
-                'outOfStockProducts' => $outOfStockProducts,
-                'todaySales' => $todaySales,
-                'monthSales' => $monthSales,
-                'yearSales' => $yearSales,
-                'pendingOrders' => $pendingOrders,
-                'processingOrders' => $processingOrders,
-                'shippedOrders' => $shippedOrders,
-                'deliveredOrders' => $deliveredOrders,
-            ],
-            'recentOrders' => $recentOrders,
+        $products = Product::where('name', 'like', "%{$query}%")
+            ->orWhere('description', 'like', "%{$query}%")
+            ->where('is_active', true)
+            ->with('category')
+            ->with(['images' => function ($q) {
+                $q->where('is_primary', true);
+            }])
+            ->paginate(24);
+
+        $storeSettings = [
+            'store_name' => Setting::get('store_name', 'My Grocery Store'),
+            'currency_symbol' => Setting::get('currency_symbol', '$'),
+        ];
+
+        return Inertia::render('shop/search', [
+            'products' => $products,
+            'query' => $query,
+            'storeSettings' => $storeSettings,
         ]);
     }
 }
