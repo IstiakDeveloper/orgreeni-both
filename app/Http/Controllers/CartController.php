@@ -42,9 +42,11 @@ class CartController extends Controller
     public function showCart()
     {
         $cart = $this->getOrCreateCart();
-        $cart->load(['items.product.images' => function ($query) {
-            $query->where('is_primary', true);
-        }]);
+        $cart->load([
+            'items.product.images' => function ($query) {
+                $query->where('is_primary', true);
+            }
+        ]);
 
         // Get applied coupon if any
         $couponCode = session('coupon_code');
@@ -78,20 +80,23 @@ class CartController extends Controller
             'quantity' => 'required|integer|min:1',
         ]);
 
-        $product = Product::findOrFail($request->product_id);
+        // Reset any previous stock values that might be cached
+        $product = Product::select('id', 'name', 'price', 'special_price', 'stock', 'is_active')
+            ->where('id', $request->product_id)
+            ->firstOrFail();
 
         // Check if product is active
         if (!$product->is_active) {
-            return response()->json([
-                'message' => 'This product is not available.'
-            ], 400);
+            return back()->with('error', 'This product is not available.');
         }
 
+        // Force these to be integers for comparison
+        $productStock = (int) $product->stock;
+        $requestQuantity = (int) $request->quantity;
+
         // Check if quantity is available in stock
-        if ($product->stock < $request->quantity) {
-            return response()->json([
-                'message' => 'The requested quantity is not available in stock.'
-            ], 400);
+        if ($productStock < $requestQuantity) {
+            return back()->with('error', 'The requested quantity is not available in stock.');
         }
 
         $cart = $this->getOrCreateCart();
@@ -103,37 +108,48 @@ class CartController extends Controller
 
         if ($cartItem) {
             // Update quantity
-            $newQuantity = $cartItem->quantity + $request->quantity;
+            $newQuantity = (int) $cartItem->quantity + $requestQuantity;
 
-            // Check if new quantity is available in stock
-            if ($product->stock < $newQuantity) {
-                return response()->json([
-                    'message' => 'The requested quantity is not available in stock.'
-                ], 400);
+            // Check with proper type casting
+            if ($productStock < $newQuantity) {
+                return back()->with('error', 'The requested quantity is not available in stock.');
             }
 
-            $cartItem->update([
-                'quantity' => $newQuantity,
-                // Use special price if available, otherwise use regular price
-                'price' => $product->special_price ?? $product->price,
-            ]);
+            // Calculate price and subtotal explicitly
+            $price = $product->special_price !== null ? (float) $product->special_price : (float) $product->price;
+            $subtotal = $price * $newQuantity;
+
+            try {
+                $cartItem->update([
+                    'quantity' => $newQuantity,
+                    'price' => $price,
+                    'subtotal' => $subtotal
+                ]);
+            } catch (\Exception $e) {
+                return back()->with('error', 'Error updating cart.');
+            }
         } else {
-            // Create new cart item
-            CartItem::create([
-                'cart_id' => $cart->id,
-                'product_id' => $product->id,
-                'quantity' => $request->quantity,
-                'price' => $product->special_price ?? $product->price,
-            ]);
+            // Create new cart item with explicit subtotal calculation
+            $price = $product->special_price !== null ? (float) $product->special_price : (float) $product->price;
+            $subtotal = $price * $requestQuantity;
+
+            try {
+                CartItem::create([
+                    'cart_id' => $cart->id,
+                    'product_id' => $product->id,
+                    'quantity' => $requestQuantity,
+                    'price' => $price,
+                    'subtotal' => $subtotal
+                ]);
+            } catch (\Exception $e) {
+                return back()->with('error', 'Error adding to cart.');
+            }
         }
 
         // Update cart total
         $cart->updateTotal();
 
-        return response()->json([
-            'message' => 'Product added to cart successfully',
-            'cart_count' => $cart->items->sum('quantity')
-        ]);
+        return back()->with('success', 'Product added to cart successfully');
     }
 
     /**
@@ -149,32 +165,34 @@ class CartController extends Controller
 
         // Check if cart item belongs to the current cart
         if ($cartItem->cart_id != $cart->id) {
-            return response()->json([
-                'message' => 'Unauthorized action.'
-            ], 403);
+            return back()->with('error', 'Unauthorized action.');
         }
 
-        $product = $cartItem->product;
+        $product = Product::findOrFail($cartItem->product_id);
+
+        // Force to integers for comparison
+        $productStock = (int) $product->stock;
+        $requestQuantity = (int) $request->quantity;
 
         // Check if quantity is available in stock
-        if ($product->stock < $request->quantity) {
-            return response()->json([
-                'message' => 'The requested quantity is not available in stock.'
-            ], 400);
+        if ($productStock < $requestQuantity) {
+            return back()->with('error', 'The requested quantity is not available in stock.');
         }
 
+        // Ensure price is stored
+        $price = $product->special_price !== null ? (float) $product->special_price : (float) $product->price;
+        $subtotal = $price * $requestQuantity;
+
         $cartItem->update([
-            'quantity' => $request->quantity,
+            'quantity' => $requestQuantity,
+            'price' => $price,
+            'subtotal' => $subtotal
         ]);
 
         // Update cart total
         $cart->updateTotal();
 
-        return response()->json([
-            'message' => 'Cart updated successfully',
-            'cart_item' => $cartItem->fresh(),
-            'cart_total' => $cart->total_amount,
-        ]);
+        return back()->with('success', 'Cart updated successfully');
     }
 
     /**
@@ -186,9 +204,7 @@ class CartController extends Controller
 
         // Check if cart item belongs to the current cart
         if ($cartItem->cart_id != $cart->id) {
-            return response()->json([
-                'message' => 'Unauthorized action.'
-            ], 403);
+            return back()->with('error', 'Unauthorized action.');
         }
 
         $cartItem->delete();
@@ -196,11 +212,7 @@ class CartController extends Controller
         // Update cart total
         $cart->updateTotal();
 
-        return response()->json([
-            'message' => 'Item removed from cart',
-            'cart_total' => $cart->total_amount,
-            'cart_count' => $cart->items->sum('quantity')
-        ]);
+        return back()->with('success', 'Item removed from cart');
     }
 
     /**
@@ -219,9 +231,7 @@ class CartController extends Controller
         // Clear any applied coupon
         session()->forget('coupon_code');
 
-        return response()->json([
-            'message' => 'Cart cleared successfully'
-        ]);
+        return back()->with('success', 'Cart cleared successfully');
     }
 
     /**
@@ -236,29 +246,19 @@ class CartController extends Controller
         $cart = $this->getOrCreateCart();
 
         if ($cart->total_amount <= 0) {
-            return response()->json([
-                'message' => 'Cannot apply coupon to an empty cart.'
-            ], 400);
+            return back()->with('error', 'Cannot apply coupon to an empty cart.');
         }
 
         $coupon = Coupon::where('code', $request->coupon_code)->first();
 
         if (!$coupon->isValid($cart->total_amount)) {
-            return response()->json([
-                'message' => 'This coupon is not valid or has expired.'
-            ], 400);
+            return back()->with('error', 'This coupon is not valid or has expired.');
         }
 
         // Store coupon code in session
         session(['coupon_code' => $request->coupon_code]);
 
-        $discountAmount = $coupon->calculateDiscount($cart->total_amount);
-
-        return response()->json([
-            'message' => 'Coupon applied successfully',
-            'discount_amount' => $discountAmount,
-            'coupon' => $coupon
-        ]);
+        return back()->with('success', 'Coupon applied successfully');
     }
 
     /**
@@ -268,9 +268,7 @@ class CartController extends Controller
     {
         session()->forget('coupon_code');
 
-        return response()->json([
-            'message' => 'Coupon removed successfully'
-        ]);
+        return back()->with('success', 'Coupon removed successfully');
     }
 
     /**
@@ -279,9 +277,33 @@ class CartController extends Controller
     public function getCartCount()
     {
         $cart = $this->getOrCreateCart();
+        $count = $cart->items->sum('quantity');
+
+        // For Inertia requests, use Inertia response
+        if (request()->header('X-Inertia')) {
+            return Inertia::render('partials/CartCount', [
+                'count' => $count
+            ]);
+        }
 
         return response()->json([
-            'count' => $cart->items->sum('quantity')
+            'count' => $count
         ]);
     }
+
+    public function getCartItems()
+    {
+        $cart = $this->getOrCreateCart();
+
+        $cart->load([
+            'items.product.images' => function ($query) {
+                $query->where('is_primary', true);
+            }
+        ]);
+
+        return response()->json([
+            'items' => $cart->items
+        ]);
+    }
+
 }

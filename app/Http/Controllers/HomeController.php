@@ -20,11 +20,13 @@ class HomeController extends Controller
         $categories = Category::where('is_active', true)
             ->whereNull('parent_id')
             ->orderBy('order')
-            ->with(['products' => function ($query) {
-                $query->where('is_active', true)
-                      ->with('images')
-                      ->take(10);
-            }])
+            ->with([
+                'products' => function ($query) {
+                    $query->where('is_active', true)
+                        ->with('images')
+                        ->take(10);
+                }
+            ])
             ->take(10)
             ->get();
 
@@ -32,9 +34,11 @@ class HomeController extends Controller
         $featuredProducts = Product::where('is_active', true)
             ->where('is_featured', true)
             ->with('category')
-            ->with(['images' => function ($query) {
-                $query->where('is_primary', true);
-            }])
+            ->with([
+                'images' => function ($query) {
+                    $query->where('is_primary', true);
+                }
+            ])
             ->take(12)
             ->get();
 
@@ -46,9 +50,11 @@ class HomeController extends Controller
         // Get latest products
         $newArrivals = Product::where('is_active', true)
             ->with('category')
-            ->with(['images' => function ($query) {
-                $query->where('is_primary', true);
-            }])
+            ->with([
+                'images' => function ($query) {
+                    $query->where('is_primary', true);
+                }
+            ])
             ->latest()
             ->take(10)
             ->get();
@@ -86,9 +92,11 @@ class HomeController extends Controller
         $products = Product::where('category_id', $category->id)
             ->where('is_active', true)
             ->with('category')
-            ->with(['images' => function ($query) {
-                $query->where('is_primary', true);
-            }])
+            ->with([
+                'images' => function ($query) {
+                    $query->where('is_primary', true);
+                }
+            ])
             ->paginate(24);
 
         $storeSettings = [
@@ -119,9 +127,11 @@ class HomeController extends Controller
         $relatedProducts = Product::where('category_id', $product->category_id)
             ->where('id', '!=', $product->id)
             ->where('is_active', true)
-            ->with(['images' => function ($query) {
-                $query->where('is_primary', true);
-            }])
+            ->with([
+                'images' => function ($query) {
+                    $query->where('is_primary', true);
+                }
+            ])
             ->take(8)
             ->get();
 
@@ -148,9 +158,11 @@ class HomeController extends Controller
             ->orWhere('description', 'like', "%{$query}%")
             ->where('is_active', true)
             ->with('category')
-            ->with(['images' => function ($q) {
-                $q->where('is_primary', true);
-            }])
+            ->with([
+                'images' => function ($q) {
+                    $q->where('is_primary', true);
+                }
+            ])
             ->paginate(24);
 
         $storeSettings = [
@@ -164,4 +176,28 @@ class HomeController extends Controller
             'storeSettings' => $storeSettings,
         ]);
     }
+
+    public function allProducts()
+    {
+        $products = Product::with([
+            'category',
+            'images' => function ($query) {
+                $query->where('is_primary', true);
+            }
+        ])
+            ->where('is_active', true)
+            ->paginate(20);
+
+        $categories = Category::where('is_active', true)
+            ->whereNull('parent_id')
+            ->with('children')
+            ->get();
+
+        return Inertia::render('shop/all-products', [
+            'products' => $products,
+            'categories' => $categories,
+        ]);
+    }
+
+
 }

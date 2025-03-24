@@ -25,13 +25,15 @@ use Illuminate\Support\Facades\Route;
 
 // Frontend Routes
 // Route::get('/', [HomeController::class, 'index'])->name('home');
-// Route::get('/products', [HomeController::class, 'allProducts'])->name('products');
+Route::get('/products', [HomeController::class, 'allProducts'])->name('products');
 // Route::get('/page/{page}', [SettingController::class, 'getPage'])->name('page');
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/category/{slug}', [HomeController::class, 'category'])->name('category.show');
 Route::get('/product/{slug}', [HomeController::class, 'product'])->name('product.show');
-Route::get('/search', [HomeController::class, 'search'])->name('search');
+// Route::get('/search', [HomeController::class, 'search'])->name('search');
+Route::get('/api/search/suggestions', [ProductController::class, 'searchSuggestions']);
+Route::get('/search', [ProductController::class, 'searchProducts']);
 Route::get('/products/featured', [HomeController::class, 'featuredProducts'])->name('products.featured');
 Route::get('/products/new', [HomeController::class, 'newArrivals'])->name('products.new');
 Route::get('/categories', [HomeController::class, 'allCategories'])->name('categories.all');
@@ -42,6 +44,8 @@ Route::get('/category/{category:id}', [CategoryController::class, 'getCategoryWi
 Route::get('/search', [ProductController::class, 'searchProducts'])->name('product.search');
 
 // Cart Routes
+
+Route::get('/cart/items', [CartController::class, 'getCartItems']);
 Route::get('/cart', [CartController::class, 'showCart'])->name('cart');
 Route::post('/cart/add', [CartController::class, 'addToCart'])->name('cart.add');
 Route::patch('/cart/update/{cartItem}', [CartController::class, 'updateCartItem'])->name('cart.update');

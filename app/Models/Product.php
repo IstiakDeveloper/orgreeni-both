@@ -26,6 +26,7 @@ class Product extends Model
     protected $casts = [
         'price' => 'decimal:2',
         'special_price' => 'decimal:2',
+        'stock' => 'integer', // Make sure stock is properly cast to integer
         'is_featured' => 'boolean',
         'is_active' => 'boolean',
     ];

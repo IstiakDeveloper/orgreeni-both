@@ -69,10 +69,10 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
           <div className="flex flex-col flex-grow">
             <div className="flex items-center h-16 flex-shrink-0 px-4 bg-emerald-800">
               <Link href={route('admin.dashboard')} className="flex items-center">
-                {storeSettings.logo ? (
-                  <img className="h-8 w-auto" src={`/storage/${storeSettings.logo}`} alt="Logo" />
+                {storeSettings?.logo ? (
+                  <img className="h-8 w-auto" src={`/storage/${storeSettings?.logo}`} alt="Logo" />
                 ) : (
-                  <h1 className="text-white font-bold text-xl">{storeSettings.name || 'Admin Panel'}</h1>
+                  <h1 className="text-white font-bold text-xl">{storeSettings?.name || 'Admin Panel'}</h1>
                 )}
               </Link>
             </div>

@@ -17,9 +17,12 @@ class ProductController extends Controller
      */
     public function index()
     {
-        $products = Product::with(['category', 'images' => function ($query) {
+        $products = Product::with([
+            'category',
+            'images' => function ($query) {
                 $query->where('is_primary', true);
-            }])
+            }
+        ])
             ->latest()
             ->paginate(10);
 
@@ -246,9 +249,12 @@ class ProductController extends Controller
      */
     public function getFeaturedProducts()
     {
-        $products = Product::with(['category', 'images' => function ($query) {
+        $products = Product::with([
+            'category',
+            'images' => function ($query) {
                 $query->where('is_primary', true);
-            }])
+            }
+        ])
             ->where('is_active', true)
             ->where('is_featured', true)
             ->inRandomOrder()
@@ -269,9 +275,12 @@ class ProductController extends Controller
 
         $product->load(['category', 'images']);
 
-        $relatedProducts = Product::with(['category', 'images' => function ($query) {
+        $relatedProducts = Product::with([
+            'category',
+            'images' => function ($query) {
                 $query->where('is_primary', true);
-            }])
+            }
+        ])
             ->where('is_active', true)
             ->where('category_id', $product->category_id)
             ->where('id', '!=', $product->id)
@@ -291,25 +300,48 @@ class ProductController extends Controller
     public function searchProducts(Request $request)
     {
         $request->validate([
-            'query' => 'required|string|min:2',
+            'q' => 'required|string|min:2',
         ]);
 
-        $query = $request->query('query');
+        $query = $request->query('q');
 
-        $products = Product::with(['category', 'images' => function ($q) {
+        $products = Product::with([
+            'category',
+            'images' => function ($q) {
                 $q->where('is_primary', true);
-            }])
+            }
+        ])
             ->where('is_active', true)
             ->where(function ($q) use ($query) {
                 $q->where('name', 'like', "%{$query}%")
-                  ->orWhere('description', 'like', "%{$query}%")
-                  ->orWhere('sku', 'like', "%{$query}%");
+                    ->orWhere('description', 'like', "%{$query}%")
+                    ->orWhere('sku', 'like', "%{$query}%");
             })
             ->paginate(20);
 
+        // Fetch related products
+        $relatedProducts = Product::with([
+            'category',
+            'images' => function ($q) {
+                $q->where('is_primary', true);
+            }
+        ])
+            ->where('is_active', true)
+            ->where(function ($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%")
+                    ->orWhereHas('category', function ($categoryQuery) use ($query) {
+                        $categoryQuery->where('name', 'like', "%{$query}%");
+                    });
+            })
+            ->inRandomOrder()
+            ->limit(10)
+            ->get();
+
         return Inertia::render('shop/search-results', [
             'products' => $products,
+            'relatedProducts' => $relatedProducts,
             'query' => $query,
         ]);
     }
+
 }

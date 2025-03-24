@@ -31,7 +31,14 @@ class Cart extends Model
 
     public function updateTotal()
     {
-        $this->total_amount = $this->items->sum('subtotal');
+        // Recalculate to avoid any cached values
+        $this->load('items');
+        $this->total_amount = $this->items->sum(function ($item) {
+            return (float) $item->price * (int) $item->quantity;
+        });
         $this->save();
+
+        return $this;
     }
+
 }

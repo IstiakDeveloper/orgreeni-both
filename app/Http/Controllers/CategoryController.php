@@ -182,9 +182,11 @@ class CategoryController extends Controller
      */
     public function getAllCategories()
     {
-        $categories = Category::with(['children' => function ($query) {
+        $categories = Category::with([
+            'children' => function ($query) {
                 $query->where('is_active', true)->orderBy('order');
-            }])
+            }
+        ])
             ->whereNull('parent_id')
             ->where('is_active', true)
             ->orderBy('order')
@@ -198,16 +200,20 @@ class CategoryController extends Controller
      */
     public function getCategoryWithProducts(Category $category)
     {
-        $category->load(['products' => function ($query) {
-            $query->where('is_active', true)
-                ->with(['images' => function ($q) {
-                    $q->where('is_primary', true);
-                }])
-                ->paginate(20);
-        }]);
-
-        return Inertia::render('Shop/Category', [
-            'category' => $category
+        return Inertia::render('shop/category', [
+            'category' => $category,
+            'products' => $category->products()
+                ->where('is_active', true)
+                ->with([
+                    'images' => function ($query) {
+                        $query->where('is_primary', true);
+                    }
+                ])
+                ->paginate(20),
+            'related_categories' => Category::where('parent_id', $category->parent_id)
+                ->where('id', '!=', $category->id)
+                ->where('is_active', true)
+                ->get()
         ]);
     }
 }
