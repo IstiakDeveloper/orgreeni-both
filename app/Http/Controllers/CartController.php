@@ -7,6 +7,8 @@ use App\Models\CartItem;
 use App\Models\Coupon;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -304,6 +306,119 @@ class CartController extends Controller
         return response()->json([
             'items' => $cart->items
         ]);
+    }
+
+    public function sync(Request $request)
+    {
+        if (!Auth::check()) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $validatedItems = $request->validate([
+            'items' => 'required|array',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.quantity' => 'required|integer|min:1'
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            // Ensure cart exists for the user
+            $cart = Cart::firstOrCreate(
+                ['user_id' => Auth::id()],
+                ['total_amount' => 0]
+            );
+
+            // Clear existing cart items
+            $cart->cartItems()->delete();
+
+            $totalAmount = 0;
+            // Add new cart items
+            foreach ($validatedItems['items'] as $item) {
+                $product = Product::findOrFail($item['product_id']);
+
+                // Check stock availability
+                if ($item['quantity'] > $product->stock) {
+                    throw new \Exception("Insufficient stock for product {$product->name}");
+                }
+
+                $price = $product->special_price ?? $product->price;
+                $subtotal = $price * $item['quantity'];
+
+                // Create cart item
+                $cart->cartItems()->create([
+                    'product_id' => $product->id,
+                    'quantity' => $item['quantity'],
+                    'price' => $price,
+                    'subtotal' => $subtotal
+                ]);
+
+                $totalAmount += $subtotal;
+            }
+
+            // Update cart total
+            $cart->total_amount = $totalAmount;
+            $cart->save();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cart synced successfully',
+                'cart' => $cart->load('cartItems')
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Cart Sync Error', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'items' => $validatedItems['items']
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    public function restore()
+    {
+        if (!Auth::check()) {
+            return response()->json(['items' => []], 200);
+        }
+
+        // Ensure cart exists
+        $cart = Cart::firstOrCreate(
+            ['user_id' => Auth::id()],
+            ['total_amount' => 0]
+        );
+
+        // Load cart items with product details
+        $cart->load([
+            'cartItems.product' => function ($query) {
+                $query->select('id', 'name', 'price', 'special_price', 'stock', 'unit');
+            }
+        ]);
+
+        // Transform cart items
+        $items = $cart->cartItems->mapWithKeys(function ($cartItem) {
+            return [
+                $cartItem->product_id => [
+                    'id' => $cartItem->product_id,
+                    'product_id' => $cartItem->product_id,
+                    'name' => $cartItem->product->name,
+                    'price' => $cartItem->product->price,
+                    'special_price' => $cartItem->product->special_price,
+                    'quantity' => $cartItem->quantity,
+                    'unit' => $cartItem->product->unit,
+                    'stock' => $cartItem->product->stock
+                ]
+            ];
+        });
+
+        return response()->json(['items' => $items]);
     }
 
 }

@@ -52,4 +52,6 @@ class CartItem extends Model
             $model->cart->updateTotal();
         });
     }
+
+
 }

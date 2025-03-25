@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\BannerController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderController;
@@ -164,4 +165,23 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/settings', [SettingController::class, 'index'])->name('settings');
         Route::patch('/settings', [SettingController::class, 'update'])->name('settings.update');
     });
+
+
+});
+
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/checkout', [CheckoutController::class, 'index'])
+        ->name('checkout.index');
+
+    Route::post('/checkout', [CheckoutController::class, 'processOrder'])
+        ->name('checkout.process');
+
+    Route::get('/orders/{order}', [OrderController::class, 'show'])
+        ->name('orders.show');
+});
+
+Route::middleware(['auth'])->group(function () {
+    Route::post('/api/cart/sync', [CartController::class, 'sync']);
+    Route::get('/api/cart/restore', [CartController::class, 'restore']);
 });
