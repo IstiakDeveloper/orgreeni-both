@@ -12,6 +12,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\Shop\OrderController as ShopOrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\UserController;
@@ -58,7 +59,13 @@ Route::get('/cart/count', [CartController::class, 'getCartCount'])->name('cart.c
 
 // Checkout & Order Routes
 Route::get('/checkout', [OrderController::class, 'checkout'])->name('checkout');
-Route::post('/place-order', [OrderController::class, 'placeOrder'])->name('order.place');
+
+Route::post('/place-order', [ShopOrderController::class, 'placeOrder'])->name('order.place');
+
+// Order Confirmation Page
+Route::get('/order/confirmation/{order}', [ShopOrderController::class, 'confirmation'])->name('order.confirmation');
+
+
 Route::get('/order-confirmation/{order}', [OrderController::class, 'orderConfirmation'])->name('order.confirmation');
 
 // API Routes for Frontend

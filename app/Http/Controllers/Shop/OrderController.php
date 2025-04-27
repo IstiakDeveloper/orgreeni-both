@@ -1,66 +1,71 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Shop;
 
-use App\Models\Area;
-use App\Models\Cart;
-use App\Models\Coupon;
+use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\Product;
+use App\Models\Cart;
+use App\Models\Coupon;
+use App\Models\Area;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class OrderController extends Controller
 {
-    /**
-     * Display a listing of the orders in admin panel.
+/**
+     * Display a listing of the user's orders
      */
     public function index()
     {
-        $orders = Order::with('user')
-            ->latest()
+        $user = Auth::user();
+
+        $orders = Order::where('user_id', $user->id)
+            ->orderBy('created_at', 'desc')
             ->paginate(10);
 
-        return Inertia::render('Admin/Orders/Index', [
+        return Inertia::render('Orders/Index', [
             'orders' => $orders
         ]);
     }
 
     /**
-     * Display the specified order in admin panel.
+     * Display order details
      */
-    public function show(Order $order)
+    public function show($id)
     {
-        $order->load(['user', 'items.product.images' => function ($query) {
-            $query->where('is_primary', true);
-        }]);
+        $user = Auth::user();
 
-        return Inertia::render('Admin/Orders/Show', [
-            'order' => $order
+        $order = Order::where('id', $id)
+            ->where('user_id', $user->id)
+            ->with('orderItems.product')
+            ->firstOrFail();
+
+        return Inertia::render('Orders/Show', [
+            'order' => $order,
+            'success' => session('success')
         ]);
     }
 
     /**
-     * Update order status
+     * Show order confirmation page
      */
-    public function updateStatus(Request $request, Order $order)
+    public function confirmation(Order $order)
     {
-        $request->validate([
-            'order_status' => 'required|string|in:pending,processing,shipped,delivered,cancelled',
-            'payment_status' => 'required|string|in:pending,paid,failed',
-        ]);
+        // Make sure the order belongs to the authenticated user
+        if (auth()->check() && $order->user_id !== auth()->id()) {
+            abort(403);
+        }
 
-        $order->update([
-            'order_status' => $request->order_status,
-            'payment_status' => $request->payment_status,
-            'delivered_at' => $request->order_status === 'delivered' ? now() : $order->delivered_at,
-        ]);
+        // Load order details
+        $order->load('orderItems.product');
 
-        return back()->with('success', 'Order status updated successfully.');
+        return Inertia::render('shop/order-confirmation', [
+            'order' => $order
+        ]);
     }
-
 
     /**
      * Place an order
@@ -127,11 +132,20 @@ class OrderController extends Controller
             ->where('city', $request->city)
             ->first();
 
-        $deliveryCharge = $areaInfo ? $areaInfo->delivery_charge : 0;
+        $deliveryCharge = $areaInfo ? $areaInfo->delivery_charge : 49; // Default to 49 if area not found
 
         // Create order using database transaction
         try {
             DB::beginTransaction();
+
+            // Update user information if logged in
+            if (auth()->check()) {
+                auth()->user()->update([
+                    'address' => $request->address,
+                    'city' => $request->city,
+                    'area' => $request->area,
+                ]);
+            }
 
             // Create the order
             $order = Order::create([
@@ -172,64 +186,13 @@ class OrderController extends Controller
 
             DB::commit();
 
-            return redirect()->route('order.confirmation', ['order' => $order->id]);
+            return redirect()->route('order.confirmation', ['order' => $order->id])
+                ->with('success', 'অর্ডার সফলভাবে প্লেস করা হয়েছে!');
 
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Order placement error: ' . $e->getMessage());
             return back()->with('error', 'An error occurred while placing your order. Please try again.');
         }
-    }
-
-    /**
-     * Show order confirmation page
-     */
-    public function orderConfirmation(Order $order)
-    {
-        // Security check: make sure the order belongs to the authenticated user if logged in
-        if (auth()->check() && $order->user_id !== auth()->id()) {
-            abort(403);
-        }
-
-        // Allow guests to view their order confirmation immediately after placing an order
-        $order->load(['items.product.images' => function ($query) {
-            $query->where('is_primary', true);
-        }]);
-
-        return Inertia::render('Shop/OrderConfirmation', [
-            'order' => $order
-        ]);
-    }
-
-    /**
-     * Display list of user orders
-     */
-    public function userOrders()
-    {
-        $orders = Order::where('user_id', auth()->id())
-            ->latest()
-            ->paginate(10);
-
-        return Inertia::render('User/Orders', [
-            'orders' => $orders
-        ]);
-    }
-
-    /**
-     * Display user order details
-     */
-    public function userOrderDetails(Order $order)
-    {
-        // Security check: make sure the order belongs to the authenticated user
-        if ($order->user_id !== auth()->id()) {
-            abort(403);
-        }
-
-        $order->load(['items.product.images' => function ($query) {
-            $query->where('is_primary', true);
-        }]);
-
-        return Inertia::render('User/OrderDetails', [
-            'order' => $order
-        ]);
     }
 }

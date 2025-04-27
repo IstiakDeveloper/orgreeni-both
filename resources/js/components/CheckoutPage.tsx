@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useCart } from '@/context/CartContext';
 import { router } from '@inertiajs/react';
-import { ShoppingBag, CreditCard, Truck, Home, MapPin } from 'lucide-react';
-import ShopLayout from '@/Layouts/ShopLayout';
+import { ShoppingBag, CreditCard, Truck, Home, CheckCircle } from 'lucide-react';
+
+interface Address {
+  id: number;
+  address: string;
+  city: string;
+  postal_code: string;
+  is_default: boolean;
+}
 
 interface User {
   id: number;
   name: string;
+  email: string;
   phone: string;
-  address: string | null;
-  city: string | null;
-  area: string | null;
 }
 
 interface DeliveryOption {
@@ -24,19 +29,15 @@ interface PaymentMethod {
   name: string;
 }
 
-interface CheckoutProps {
-  cartFromServer?: {
-    items: any;
-    total: number;
-    count: number;
-  };
+interface CheckoutPageProps {
+  defaultAddress?: Address;
   paymentMethods: PaymentMethod[];
   deliveryOptions: DeliveryOption[];
   user: User;
 }
 
-const Checkout: React.FC<CheckoutProps> = ({
-  cartFromServer,
+const CheckoutPage: React.FC<CheckoutPageProps> = ({
+  defaultAddress,
   paymentMethods,
   deliveryOptions,
   user
@@ -44,42 +45,36 @@ const Checkout: React.FC<CheckoutProps> = ({
   // Get cart data from context
   const { items, count, total, syncCart } = useCart();
 
-  // Form state
-  const [formData, setFormData] = useState({
-    name: user.name || '',
-    phone: user.phone || '',
-    address: user.address || '',
-    city: user.city || '',
-    area: user.area || '',
-    payment_method: 'cash_on_delivery',
-    notes: ''
-  });
-
+  const [selectedAddress, setSelectedAddress] = useState<number | null>(defaultAddress?.id || null);
+  const [paymentMethod, setPaymentMethod] = useState<string>('cash_on_delivery');
+  const [deliveryOption, setDeliveryOption] = useState<string>('standard');
+  const [notes, setNotes] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
 
-  // Force sync cart with backend when component mounts
+  // Ensure cart is synced with backend when component mounts
   useEffect(() => {
+    // Force sync cart with backend
     syncCart();
   }, []);
 
-  // If no items in cart, redirect to home (but give some time for context to load)
+  // If no items in cart, redirect to home
   useEffect(() => {
-    if (count === 0 && !Object.keys(items).length) {
-      // Only redirect if both context cart and server cart are empty
-      if (!cartFromServer || !Object.keys(cartFromServer.items).length) {
-        const timer = setTimeout(() => {
+    if (count === 0) {
+      // Delay to allow for cart restoration
+      const timer = setTimeout(() => {
+        if (count === 0) {
           window.location.href = '/';
-        }, 1500); // Give some time for cart to potentially load
+        }
+      }, 1000);
 
-        return () => clearTimeout(timer);
-      }
+      return () => clearTimeout(timer);
     }
-  }, [count, items, cartFromServer]);
+  }, [count]);
 
   // Get delivery cost based on selected option
   const getDeliveryCost = () => {
-    const option = deliveryOptions.find(opt => opt.id === formData.payment_method);
+    const option = deliveryOptions.find(opt => opt.id === deliveryOption);
     return option ? option.cost : 49;
   };
 
@@ -87,57 +82,32 @@ const Checkout: React.FC<CheckoutProps> = ({
   const deliveryCost = getDeliveryCost();
   const orderTotal = total + deliveryCost;
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const validateForm = () => {
-    const newErrors: {[key: string]: string} = {};
-
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
-    }
-
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
-    }
-
-    if (!formData.address.trim()) {
-      newErrors.address = 'Delivery address is required';
-    }
-
-    if (!formData.city.trim()) {
-      newErrors.city = 'City is required';
-    }
-
-    if (!formData.area.trim()) {
-      newErrors.area = 'Area is required';
-    }
-
-    return newErrors;
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validate form
-    const formErrors = validateForm();
+    const newErrors: {[key: string]: string} = {};
 
-    if (Object.keys(formErrors).length > 0) {
-      setErrors(formErrors);
+    if (!selectedAddress) {
+      newErrors.address = 'Please select a delivery address';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
     setIsSubmitting(true);
 
-    // Final cart sync before checkout to ensure latest cart data is on server
+    // Final cart sync before checkout
     syncCart().then(() => {
       // Submit the order using Inertia
-      router.post('/place-order', formData, {
+      router.post('/checkout/process', {
+        address_id: selectedAddress,
+        payment_method: paymentMethod,
+        delivery_option: deliveryOption,
+        notes: notes,
+      }, {
         onSuccess: () => {
           // Will be redirected by the controller
         },
@@ -149,27 +119,15 @@ const Checkout: React.FC<CheckoutProps> = ({
     });
   };
 
-  // Determine which cart data to use
-  // Prioritize the React Context cart data if it has items
-  const displayItems = Object.keys(items).length > 0 ? items :
-                      (cartFromServer && Object.keys(cartFromServer.items).length > 0 ?
-                      cartFromServer.items : {});
-
-  const displayCount = Object.keys(items).length > 0 ? count :
-                      (cartFromServer ? cartFromServer.count : 0);
-
-  const displayTotal = Object.keys(items).length > 0 ? total :
-                      (cartFromServer ? cartFromServer.total : 0);
-
   return (
-    <ShopLayout>
+    <div className="bg-gray-50 min-h-screen">
       <div className="container mx-auto py-8 px-4">
         <h1 className="text-2xl font-bold mb-6 flex items-center">
           <ShoppingBag className="mr-2" size={24} />
           Checkout
         </h1>
 
-        {displayCount === 0 ? (
+        {count === 0 ? (
           <div className="bg-white rounded-lg shadow p-6 text-center">
             <p className="text-gray-500 mb-4">Your cart is empty</p>
             <a href="/" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
@@ -184,13 +142,13 @@ const Checkout: React.FC<CheckoutProps> = ({
                 <div className="bg-green-600 text-white px-4 py-3">
                   <h2 className="font-medium flex items-center">
                     <ShoppingBag className="mr-2" size={18} />
-                    Order Summary ({displayCount} item{displayCount !== 1 ? 's' : ''})
+                    Order Summary ({count} item{count !== 1 ? 's' : ''})
                   </h2>
                 </div>
                 <div className="p-4">
                   {/* Cart Items */}
                   <div className="divide-y divide-gray-100">
-                    {Object.values(displayItems).map((item: any) => (
+                    {Object.values(items).map((item) => (
                       <div key={item.id} className="py-3 flex">
                         <div className="w-16 h-16 flex-shrink-0">
                           <img
@@ -218,97 +176,79 @@ const Checkout: React.FC<CheckoutProps> = ({
                 </div>
               </div>
 
-              {/* Delivery Information */}
+              {/* Delivery Address */}
               <div className="bg-white rounded-lg shadow overflow-hidden mb-6">
                 <div className="bg-green-600 text-white px-4 py-3">
                   <h2 className="font-medium flex items-center">
                     <Home className="mr-2" size={18} />
-                    Delivery Information
+                    Delivery Address
                   </h2>
                 </div>
                 <div className="p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                        Full Name *
-                      </label>
-                      <input
-                        type="text"
-                        id="name"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                        placeholder="Your full name"
-                      />
-                      {errors.name && <p className="mt-1 text-red-500 text-xs">{errors.name}</p>}
+                  {defaultAddress ? (
+                    <div className="border border-gray-200 rounded p-3">
+                      <div className="flex items-start">
+                        <input
+                          type="radio"
+                          name="address"
+                          id={`address-${defaultAddress.id}`}
+                          className="mt-1"
+                          checked={selectedAddress === defaultAddress.id}
+                          onChange={() => setSelectedAddress(defaultAddress.id)}
+                        />
+                        <label htmlFor={`address-${defaultAddress.id}`} className="ml-2 text-sm">
+                          <div className="font-medium">{user.name}</div>
+                          <div className="text-gray-600">{defaultAddress.address}</div>
+                          <div className="text-gray-600">{defaultAddress.city}, {defaultAddress.postal_code}</div>
+                          <div className="text-gray-600">Phone: {user.phone}</div>
+                        </label>
+                      </div>
                     </div>
-
-                    <div>
-                      <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                        Phone Number *
-                      </label>
-                      <input
-                        type="text"
-                        id="phone"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                        placeholder="Your phone number"
-                      />
-                      {errors.phone && <p className="mt-1 text-red-500 text-xs">{errors.phone}</p>}
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-gray-500 mb-2">No delivery address found</p>
+                      <a href="/profile/addresses" className="text-green-600 hover:underline">
+                        Add a new address
+                      </a>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="mb-4">
-                    <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
-                      Delivery Address *
-                    </label>
-                    <textarea
-                      id="address"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleChange}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                      placeholder="House/Flat/Block No., Colony/Street/Locality"
-                      rows={2}
-                    />
-                    {errors.address && <p className="mt-1 text-red-500 text-xs">{errors.address}</p>}
-                  </div>
+                  {errors.address && (
+                    <div className="mt-2 text-red-500 text-sm">{errors.address}</div>
+                  )}
+                </div>
+              </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
-                        City *
-                      </label>
-                      <input
-                        type="text"
-                        id="city"
-                        name="city"
-                        value={formData.city}
-                        onChange={handleChange}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                        placeholder="City"
-                      />
-                      {errors.city && <p className="mt-1 text-red-500 text-xs">{errors.city}</p>}
-                    </div>
-
-                    <div>
-                      <label htmlFor="area" className="block text-sm font-medium text-gray-700 mb-1">
-                        Area *
-                      </label>
-                      <input
-                        type="text"
-                        id="area"
-                        name="area"
-                        value={formData.area}
-                        onChange={handleChange}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                        placeholder="Area/Locality"
-                      />
-                      {errors.area && <p className="mt-1 text-red-500 text-xs">{errors.area}</p>}
-                    </div>
+              {/* Delivery Options */}
+              <div className="bg-white rounded-lg shadow overflow-hidden mb-6">
+                <div className="bg-green-600 text-white px-4 py-3">
+                  <h2 className="font-medium flex items-center">
+                    <Truck className="mr-2" size={18} />
+                    Delivery Options
+                  </h2>
+                </div>
+                <div className="p-4">
+                  <div className="space-y-3">
+                    {deliveryOptions.map((option) => (
+                      <div key={option.id} className="border border-gray-200 rounded p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-start">
+                            <input
+                              type="radio"
+                              name="delivery"
+                              id={`delivery-${option.id}`}
+                              className="mt-1"
+                              checked={deliveryOption === option.id}
+                              onChange={() => setDeliveryOption(option.id)}
+                            />
+                            <label htmlFor={`delivery-${option.id}`} className="ml-2 text-sm">
+                              <div className="font-medium">{option.name}</div>
+                            </label>
+                          </div>
+                          <div className="font-medium">৳{option.cost}</div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -328,12 +268,11 @@ const Checkout: React.FC<CheckoutProps> = ({
                         <div className="flex items-start">
                           <input
                             type="radio"
-                            name="payment_method"
+                            name="payment"
                             id={`payment-${method.id}`}
-                            value={method.id}
                             className="mt-1"
-                            checked={formData.payment_method === method.id}
-                            onChange={handleChange}
+                            checked={paymentMethod === method.id}
+                            onChange={() => setPaymentMethod(method.id)}
                           />
                           <label htmlFor={`payment-${method.id}`} className="ml-2 text-sm">
                             <div className="font-medium">{method.name}</div>
@@ -357,8 +296,8 @@ const Checkout: React.FC<CheckoutProps> = ({
                     rows={3}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
                     placeholder="Any special instructions for delivery"
-                    value={formData.notes}
-                    onChange={handleChange}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
                   ></textarea>
                 </div>
               </div>
@@ -374,7 +313,7 @@ const Checkout: React.FC<CheckoutProps> = ({
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Subtotal</span>
-                      <span>৳{displayTotal.toFixed(0)}</span>
+                      <span>৳{total.toFixed(0)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Delivery</span>
@@ -383,16 +322,16 @@ const Checkout: React.FC<CheckoutProps> = ({
                     <div className="border-t border-gray-200 pt-2 mt-2">
                       <div className="flex justify-between font-medium">
                         <span>Total</span>
-                        <span>৳{(displayTotal + deliveryCost).toFixed(0)}</span>
+                        <span>৳{orderTotal.toFixed(0)}</span>
                       </div>
                     </div>
                   </div>
 
                   <button
                     onClick={handleSubmit}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || !selectedAddress}
                     className={`w-full py-3 rounded font-medium text-white ${
-                      isSubmitting
+                      isSubmitting || !selectedAddress
                         ? 'bg-gray-400 cursor-not-allowed'
                         : 'bg-green-600 hover:bg-green-700'
                     }`}
@@ -400,13 +339,11 @@ const Checkout: React.FC<CheckoutProps> = ({
                     {isSubmitting ? 'Processing...' : 'Place Order'}
                   </button>
 
-                  {Object.keys(errors).length > 0 &&
-                    Object.keys(errors).some(key => !['name', 'phone', 'address', 'city', 'area'].includes(key)) && (
+                  {Object.keys(errors).length > 0 && Object.keys(errors).some(key => key !== 'address') && (
                     <div className="mt-4 p-3 bg-red-50 text-red-700 rounded text-sm">
                       <ul className="list-disc pl-4">
                         {Object.entries(errors).map(([key, error]) => (
-                          !['name', 'phone', 'address', 'city', 'area'].includes(key) &&
-                            <li key={key}>{error}</li>
+                          key !== 'address' && <li key={key}>{error}</li>
                         ))}
                       </ul>
                     </div>
@@ -417,8 +354,8 @@ const Checkout: React.FC<CheckoutProps> = ({
           </div>
         )}
       </div>
-    </ShopLayout>
+    </div>
   );
 };
 
-export default Checkout;
+export default CheckoutPage;

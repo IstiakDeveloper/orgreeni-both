@@ -10,7 +10,8 @@ const CartSidebar = () => {
         isCartOpen,
         toggleCart,
         updateQuantity,
-        removeFromCart
+        removeFromCart,
+        syncCart
     } = useCart();
 
     const countRef = useRef(null);
@@ -243,11 +244,10 @@ const CartSidebar = () => {
                     <div className="p-3 border-t border-gray-200 bg-white">
                         <button
                             onClick={() => {
-                                // Sync with server before redirecting to checkout
-                                // syncCart().then(() => {
-                                //   window.location.href = '/checkout';
-                                // });
-                                window.location.href = '/checkout';
+                                // Ensure cart is synced with server before redirecting to checkout
+                                syncCart().then(() => {
+                                  window.location.href = '/checkout';
+                                });
                             }}
                             className="w-full py-3 md:py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded text-sm"
                         >

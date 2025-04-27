@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Order;
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Models\Product;
+use App\Models\Coupon;
+use App\Models\Area;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class CheckoutController extends Controller
@@ -22,107 +25,98 @@ class CheckoutController extends Controller
 
         $user = Auth::user();
 
-        // Ensure cart exists
-        $cart = Cart::firstOrCreate(
-            ['user_id' => $user->id],
-            ['total_amount' => 0]
-        );
+        // Get or create cart
+        $cart = Cart::where(function ($query) {
+            if (auth()->check()) {
+                $query->where('user_id', auth()->id());
+            } else {
+                $query->where('session_id', session()->getId());
+            }
+        })->first();
 
-        // Load cart items
-        $cart->load('cartItems.product.images');
-
-        // If no cart items, redirect
-        if ($cart->cartItems->isEmpty()) {
-            return redirect()->route('home')->with('error', 'Your cart is empty. Please add items to cart first.');
+        // If no cart found, create one
+        if (!$cart) {
+            $cart = Cart::create([
+                'user_id' => Auth::id(),
+                'session_id' => session()->getId(),
+                'total_amount' => 0
+            ]);
         }
 
-        // Rest of the existing code remains the same
+        // Load cart items with product details
+        $cart->load(['items.product.images']);
+
+        // Transform cart items for frontend (if any)
+        $formattedItems = [];
+        $subtotal = 0;
+        $itemCount = 0;
+
+        foreach ($cart->items as $item) {
+            $product = $item->product;
+            $price = $product->special_price ?? $product->price;
+            $itemTotal = $price * $item->quantity;
+            $subtotal += $itemTotal;
+            $itemCount += $item->quantity;
+
+            // Get the product image
+            $image = null;
+            if ($product->images && $product->images->isNotEmpty()) {
+                $primaryImage = $product->images->where('is_primary', true)->first();
+                $image = $primaryImage ? $primaryImage->image : $product->images->first()->image;
+            }
+
+            $formattedItems[$product->id] = [
+                'id' => $product->id,
+                'product_id' => $product->id,
+                'name' => $product->name,
+                'price' => (float)$product->price,
+                'special_price' => $product->special_price ? (float)$product->special_price : null,
+                'image' => $image,
+                'unit' => $product->unit,
+                'stock' => (int)$product->stock,
+                'quantity' => (int)$item->quantity
+            ];
+        }
+
+        // Define available payment methods
         $paymentMethods = [
             ['id' => 'cash_on_delivery', 'name' => 'Cash on Delivery'],
-            ['id' => 'bkash', 'name' => 'bKash'],
-            ['id' => 'nagad', 'name' => 'Nagad'],
-            ['id' => 'card', 'name' => 'Credit/Debit Card']
+            ['id' => 'online_payment', 'name' => 'Online Payment']
         ];
 
+        // Define delivery options
         $deliveryOptions = [
             ['id' => 'standard', 'name' => 'Standard Delivery (3-5 days)', 'cost' => 49],
             ['id' => 'express', 'name' => 'Express Delivery (1-2 days)', 'cost' => 99]
         ];
 
+        // Apply coupon discount if any
+        $couponCode = session('coupon_code');
+        $coupon = null;
+        $discountAmount = 0;
+
+        if ($couponCode) {
+            $coupon = Coupon::where('code', $couponCode)->first();
+            if ($coupon && $coupon->isValid($subtotal)) {
+                $discountAmount = $coupon->calculateDiscount($subtotal);
+            } else {
+                // Clear invalid coupon
+                session()->forget('coupon_code');
+            }
+        }
+
+        // Return Inertia view with data
         return Inertia::render('checkout/index', [
-            'cart' => $cart,
-            'defaultAddress' => $user->addresses()->where('is_default', true)->first(),
+            'cartFromServer' => [
+                'items' => $formattedItems,
+                'total' => (float)$subtotal,
+                'count' => $itemCount
+            ],
+            'discountAmount' => $discountAmount,
+            'coupon' => $coupon,
             'paymentMethods' => $paymentMethods,
             'deliveryOptions' => $deliveryOptions,
             'user' => $user
         ]);
-    }
-
-    public function processOrder(Request $request)
-    {
-        // Validate request
-        $validatedData = $request->validate([
-            'address_id' => 'required|exists:addresses,id',
-            'payment_method' => 'required|in:cash_on_delivery,bkash,nagad,card',
-            'delivery_option' => 'required|in:standard,express',
-            'notes' => 'nullable|string|max:500'
-        ]);
-
-        // Start transaction
-        \DB::beginTransaction();
-
-        try {
-            // Get user's cart
-            $cart = Cart::where('user_id', Auth::id())
-                ->with('cartItems.product')
-                ->firstOrFail();
-
-            // Calculate total
-            $subtotal = $cart->cartItems->sum(function ($item) {
-                return ($item->product->special_price ?? $item->product->price) * $item->quantity;
-            });
-
-            // Determine delivery cost
-            $deliveryCost = $validatedData['delivery_option'] === 'express' ? 99 : 49;
-            $total = $subtotal + $deliveryCost;
-
-            // Create order
-            $order = Order::create([
-                'user_id' => Auth::id(),
-                'address_id' => $validatedData['address_id'],
-                'payment_method' => $validatedData['payment_method'],
-                'delivery_option' => $validatedData['delivery_option'],
-                'subtotal' => $subtotal,
-                'delivery_cost' => $deliveryCost,
-                'total' => $total,
-                'status' => 'pending',
-                'notes' => $validatedData['notes'] ?? null
-            ]);
-
-            // Create order items
-            foreach ($cart->cartItems as $cartItem) {
-                $order->orderItems()->create([
-                    'product_id' => $cartItem->product_id,
-                    'quantity' => $cartItem->quantity,
-                    'price' => $cartItem->product->special_price ?? $cartItem->product->price
-                ]);
-
-                // Reduce product stock
-                $cartItem->product->decrement('stock', $cartItem->quantity);
-            }
-
-            // Clear the cart
-            $cart->cartItems()->delete();
-
-            \DB::commit();
-
-            // Redirect to order confirmation
-            return redirect()->route('orders.show', $order->id)
-                ->with('success', 'Order placed successfully!');
-
-        } catch (\Exception $e) {
-            \DB::rollBack();
-            return back()->with('error', 'Failed to place order. Please try again.');
-        }
     }
 }
