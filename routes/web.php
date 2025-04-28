@@ -112,7 +112,7 @@ Route::middleware('auth')->group(function () {
 
     // User Orders Routes
     Route::get('/orders', [OrderController::class, 'userOrders'])->name('user.orders');
-    Route::get('/orders/{order}', [OrderController::class, 'userOrderDetails'])->name('user.orders.show');
+    Route::get('user/orders/{order}', [OrderController::class, 'userOrderDetails'])->name('user.orders.show');
 
     // Wishlist Routes
     Route::get('/wishlist', [WishlistController::class, 'index'])->name('wishlist');

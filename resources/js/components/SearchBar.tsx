@@ -31,7 +31,7 @@ const SearchBar: React.FC = () => {
             <div className="relative flex items-center bg-white rounded-md overflow-hidden">
                 <input
                     type="text"
-                    placeholder="Search for products (e.g. eggs, milk, potato)"
+                    placeholder="পণ্য খুঁজুন (যেমন ডিম, দুধ, আলু)"
                     className="w-full py-2 px-4 border-none focus:outline-none text-gray-700"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}

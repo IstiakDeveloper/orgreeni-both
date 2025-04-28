@@ -195,7 +195,7 @@ class OrderController extends Controller
             $query->where('is_primary', true);
         }]);
 
-        return Inertia::render('Shop/OrderConfirmation', [
+        return Inertia::render('shop/order-confirmation', [
             'order' => $order
         ]);
     }
@@ -209,7 +209,7 @@ class OrderController extends Controller
             ->latest()
             ->paginate(10);
 
-        return Inertia::render('User/Orders', [
+        return Inertia::render('user/orders', [
             'orders' => $orders
         ]);
     }
@@ -228,7 +228,7 @@ class OrderController extends Controller
             $query->where('is_primary', true);
         }]);
 
-        return Inertia::render('User/OrderDetails', [
+        return Inertia::render('user/order-details', [
             'order' => $order
         ]);
     }

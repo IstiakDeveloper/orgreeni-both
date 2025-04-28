@@ -42,12 +42,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
     isLoading = false,
     isHighlighted = false
 }) => {
-    // Get primary image or first image or placeholder
+    // প্রাইমারি ইমেজ বা প্রথম ইমেজ বা প্লেসহোল্ডার নির্ধারণ
     const productImage = product.images && product.images.length > 0
         ? product.images.find(img => img.is_primary)?.image || product.images[0].image
         : null;
 
-    // Calculate discount percentage if special price exists
+    // বিশেষ মূল্য থাকলে ছাড়ের শতাংশ গণনা
     const discountPercentage = product.special_price
         ? Math.round(((product.price - product.special_price) / product.price) * 100)
         : 0;
@@ -59,9 +59,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 ${isHighlighted ? 'border-green-500 transform scale-[1.01] shadow-md' : 'border-gray-100'}
                 flex flex-col h-full
             `}
-            aria-label={`Product: ${product.name}`}
+            aria-label={`পণ্য: ${product.name}`}
         >
-            {/* Product Image with Link */}
+            {/* পণ্যের ছবি ও লিংক */}
             <Link
                 href={`/product/${product.slug}`}
                 className="relative block overflow-hidden rounded-t-lg"
@@ -75,26 +75,26 @@ const ProductCard: React.FC<ProductCardProps> = ({
                     />
                 </div>
 
-                {/* Discount Tag - Show only if there's a special price */}
+                {/* ছাড়ের ট্যাগ - শুধুমাত্র বিশেষ মূল্য থাকলে দেখানো হবে */}
                 {product.special_price && (
                     <span className="absolute top-1 right-1 sm:top-2 sm:right-2 bg-red-500 text-white text-[10px] sm:text-xs px-1 py-0.5 rounded-sm font-medium">
-                        {discountPercentage}% OFF
+                        {discountPercentage}% ছাড়
                     </span>
                 )}
 
-                {/* Low Stock Warning */}
+                {/* কম স্টকের সতর্কতা */}
                 {product.stock <= 5 && product.stock > 0 && (
                     <div className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 bg-orange-500 text-white flex items-center px-1 py-0.5 rounded-sm text-[9px] sm:text-xs">
                         <AlertTriangle className="w-3 h-3 mr-0.5" />
-                        Only {product.stock} left
+                        মাত্র {product.stock}টি বাকি
                     </div>
                 )}
             </Link>
 
-            {/* Product Info */}
+            {/* পণ্যের তথ্য */}
             <div className="p-2 sm:p-3 flex-grow flex flex-col justify-between">
                 <div>
-                    {/* Category Link */}
+                    {/* ক্যাটাগরি লিংক */}
                     <Link
                         href={`/category/${product.category.slug}`}
                         className="text-[10px] sm:text-xs text-gray-500 hover:text-green-600 transition-colors"
@@ -102,7 +102,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                         {product.category.name}
                     </Link>
 
-                    {/* Product Name */}
+                    {/* পণ্যের নাম */}
                     <Link
                         href={`/product/${product.slug}`}
                         className="block mt-1 mb-2 font-medium text-gray-800 text-sm sm:text-base line-clamp-2 hover:text-green-600 transition-colors"
@@ -112,17 +112,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 </div>
 
                 <div>
-                    {/* Price Display */}
+                    {/* মূল্য প্রদর্শন */}
                     <div className="flex items-baseline mb-2">
-                        {/* Current Price (Special Price if available, otherwise regular price) */}
+                        {/* বর্তমান মূল্য (বিশেষ মূল্য থাকলে, অন্যথায় নিয়মিত মূল্য) */}
                         <span className="text-base sm:text-lg font-bold text-green-600">
                             {storeSettings.currency_symbol}{(product.special_price || product.price).toFixed(2)}
                         </span>
 
-                        {/* Unit */}
+                        {/* একক */}
                         <span className="text-[10px] sm:text-xs text-gray-500 ml-1">/{product.unit}</span>
 
-                        {/* Original Price (shown with strikethrough if there's a special price) */}
+                        {/* আসল মূল্য (বিশেষ মূল্য থাকলে কাটা দাগ সহ দেখানো হয়) */}
                         {product.special_price && (
                             <span className="text-xs sm:text-sm text-gray-500 line-through ml-2">
                                 {storeSettings.currency_symbol}{product.price.toFixed(2)}
@@ -130,7 +130,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                         )}
                     </div>
 
-                    {/* Add to Cart Controls */}
+                    {/* কার্টে যোগ করার নিয়ন্ত্রণ */}
                     <div className="flex items-center justify-between">
                         {cartQuantity === 0 ? (
                             <button
@@ -145,7 +145,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                                             'bg-green-500 hover:bg-green-600 text-white'
                                     }
                                 `}
-                                aria-label={`Add ${product.name} to cart`}
+                                aria-label={`${product.name} কার্টে যোগ করুন`}
                             >
                                 {isLoading ? (
                                     <span className="flex items-center">
@@ -153,14 +153,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
-                                        Loading...
+                                        লোড হচ্ছে...
                                     </span>
                                 ) : product.stock <= 0 ? (
-                                    "Out of Stock"
+                                    "স্টকে নেই"
                                 ) : (
                                     <>
                                         <ShoppingBag className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
-                                        Add to Cart
+                                        কার্টে যোগ করুন
                                     </>
                                 )}
                             </button>
@@ -173,7 +173,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                                         px-2 py-1 sm:py-1.5 text-gray-700 hover:bg-gray-100 rounded-l-md transition-colors
                                         ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}
                                     `}
-                                    aria-label={`Decrease quantity of ${product.name}`}
+                                    aria-label={`${product.name} এর পরিমাণ কমান`}
                                 >
                                     <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                 </button>
@@ -196,7 +196,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                                         px-2 py-1 sm:py-1.5 text-gray-700 hover:bg-gray-100 rounded-r-md transition-colors
                                         ${isLoading || cartQuantity >= product.stock ? 'opacity-50 cursor-not-allowed' : ''}
                                     `}
-                                    aria-label={`Increase quantity of ${product.name}`}
+                                    aria-label={`${product.name} এর পরিমাণ বাড়ান`}
                                 >
                                     <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                 </button>

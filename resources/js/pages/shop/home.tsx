@@ -5,6 +5,7 @@ import { ChevronRight, ShoppingBag, Clock, Percent, CheckCircle, ArrowRight } fr
 import ProductCard from '@/components/ProductCard';
 import { useCart } from '@/context/CartContext';
 
+// ইন্টারফেস ডেফিনিশন
 interface ProductImage {
     id: number;
     image: string;
@@ -55,47 +56,33 @@ interface HomeProps {
 }
 
 const Home: React.FC<HomeProps> = ({ categories, featuredProducts, banners, newArrivals, storeSettings }) => {
-    // Access appSettings from shared props
+    // স্টেট ও কনটেক্সট সেটাপ
     const [highlightedProduct, setHighlightedProduct] = useState<number | null>(null);
     const { appSettings, flash } = usePage().props as any;
-
-    // Use appSettings if available, otherwise fallback to storeSettings prop
     const settings = appSettings || storeSettings;
-
-    // Use our cart context instead of local state
     const { addToCart, removeFromCart, items, count } = useCart();
+    const [isLoading, setIsLoading] = React.useState<{ [key: number]: boolean }>({});
 
-    // Helper function to get quantity from cart
+    // কার্ট হেল্পার ফাংশন
     const getCartQuantity = (productId: number) => {
         return items[productId]?.quantity || 0;
     };
 
-    // For loading state (we could also add this to the cart context if needed)
-    const [isLoading, setIsLoading] = React.useState<{ [key: number]: boolean }>({});
-
+    // কার্ট অ্যাকশন হ্যান্ডলার
     const handleAddToCart = (productId: number) => {
-        // Find the product
         const product = [...featuredProducts, ...newArrivals].find(p => p.id === productId);
-
         if (!product) {
             console.error(`Product with ID ${productId} not found`);
             return;
         }
 
-        // Set loading state
         setIsLoading(prev => ({ ...prev, [productId]: true }));
-
-        // Highlight the product
         setHighlightedProduct(productId);
 
-        // Add to cart - returns true if successful, false if failed (e.g., stock limit)
         const success = addToCart(product, 1);
 
-        // Clear loading and highlight state after a short delay
         setTimeout(() => {
             setIsLoading(prev => ({ ...prev, [productId]: false }));
-
-            // Clear highlight after 1 second
             setTimeout(() => {
                 setHighlightedProduct(null);
             }, 1000);
@@ -103,13 +90,8 @@ const Home: React.FC<HomeProps> = ({ categories, featuredProducts, banners, newA
     };
 
     const handleRemoveFromCart = (productId: number) => {
-        // Set loading state
         setIsLoading(prev => ({ ...prev, [productId]: true }));
-
-        // Remove from cart
         removeFromCart(productId, 1);
-
-        // Clear loading state after a short delay
         setTimeout(() => {
             setIsLoading(prev => ({ ...prev, [productId]: false }));
         }, 300);
@@ -121,14 +103,10 @@ const Home: React.FC<HomeProps> = ({ categories, featuredProducts, banners, newA
 
     return (
         <ShopLayout>
-            <Head title={`${settings.store_name} - Fresh Groceries Delivered`} />
+            <Head title={`${settings.store_name} - তাজা খাবার সরাসরি হোম ডেলিভারি`} />
 
-            <div
-                id="main-content"
-                className="mx-auto transition-all duration-300"
-                style={{ fontFamily: "'Segoe UI', Helvetica, 'Droid Sans', Arial, 'lucida grande', tahoma, verdana, arial, sans-serif" }}
-            >
-                {/* Hero Section with Banner - Mobile Responsive */}
+            <div id="main-content" className="mx-auto transition-all duration-300" style={{ fontFamily: "'Segoe UI', Helvetica, 'Droid Sans', Arial, 'lucida grande', tahoma, verdana, arial, sans-serif" }}>
+                {/* হিরো ব্যানার সেকশন */}
                 <div className="relative">
                     {banners.length > 0 && (
                         <div className="relative">
@@ -141,16 +119,16 @@ const Home: React.FC<HomeProps> = ({ categories, featuredProducts, banners, newA
                             <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex items-center">
                                 <div className="text-white ml-4 md:ml-8 lg:ml-16 max-w-lg">
                                     <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-2 md:mb-4 leading-tight">
-                                        Fresh Groceries Delivered Fast
+                                        তাজা খাবার সরাসরি বাসায়
                                     </h1>
                                     <p className="text-sm sm:text-base md:text-lg lg:text-xl mb-3 md:mb-6 max-w-xs sm:max-w-sm md:max-w-lg">
-                                        Shop our wide selection of fresh, high-quality groceries.
+                                        আমাদের তাজা ও মানসম্পন্ন পণ্য সংগ্রহ করুন সরাসরি আপনার বাসায়
                                     </p>
                                     <Link
                                         href="/products"
                                         className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 md:px-6 md:py-3 rounded-md font-medium text-sm md:text-lg transition-colors inline-block"
                                     >
-                                        Shop Now
+                                        শপিং করুন
                                     </Link>
                                 </div>
                             </div>
@@ -158,12 +136,12 @@ const Home: React.FC<HomeProps> = ({ categories, featuredProducts, banners, newA
                     )}
                 </div>
 
-                {/* Main Content with Padding - Mobile Responsive */}
+                {/* মূল কনটেন্ট */}
                 <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
-                    {/* Why Choose Us Section - Mobile Responsive */}
+                    {/* সুবিধাসমূহ সেকশন */}
                     <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6 sm:mb-8 md:mb-10">
                         <div className="bg-green-500 py-2 md:py-3">
-                            <h2 className="text-lg md:text-xl font-bold text-white text-center">Why Shop With Us</h2>
+                            <h2 className="text-lg md:text-xl font-bold text-white text-center">আমাদের সুবিধাসমূহ</h2>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-0 divide-y md:divide-y-0 divide-x divide-gray-200">
                             <div className="p-3 sm:p-4 md:p-6 flex flex-col sm:flex-row items-center text-center sm:text-left">
@@ -171,8 +149,8 @@ const Home: React.FC<HomeProps> = ({ categories, featuredProducts, banners, newA
                                     <ShoppingBag className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
                                 </div>
                                 <div>
-                                    <span className="text-base md:text-lg font-bold text-green-600 block sm:inline">15,000+ Products</span>
-                                    <p className="text-gray-600 text-xs sm:text-sm mt-1">Wide selection</p>
+                                    <span className="text-base md:text-lg font-bold text-green-600 block sm:inline">১৫,০০০+ পণ্য</span>
+                                    <p className="text-gray-600 text-xs sm:text-sm mt-1">বিস্তৃত পণ্য বাছাই</p>
                                 </div>
                             </div>
 
@@ -181,8 +159,8 @@ const Home: React.FC<HomeProps> = ({ categories, featuredProducts, banners, newA
                                     <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
                                 </div>
                                 <div>
-                                    <span className="text-base md:text-lg font-bold text-green-600 block sm:inline">Pay on Delivery</span>
-                                    <p className="text-gray-600 text-xs sm:text-sm mt-1">Cash on delivery</p>
+                                    <span className="text-base md:text-lg font-bold text-green-600 block sm:inline">ক্যাশ অন ডেলিভারি</span>
+                                    <p className="text-gray-600 text-xs sm:text-sm mt-1">হাতে পেয়ে মূল্য পরিশোধ</p>
                                 </div>
                             </div>
 
@@ -191,8 +169,8 @@ const Home: React.FC<HomeProps> = ({ categories, featuredProducts, banners, newA
                                     <Clock className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
                                 </div>
                                 <div>
-                                    <span className="text-base md:text-lg font-bold text-green-600 block sm:inline">1-Hour Delivery</span>
-                                    <p className="text-gray-600 text-xs sm:text-sm mt-1">Quick service</p>
+                                    <span className="text-base md:text-lg font-bold text-green-600 block sm:inline">১ ঘন্টার ডেলিভারি</span>
+                                    <p className="text-gray-600 text-xs sm:text-sm mt-1">দ্রুত পরিষেবা</p>
                                 </div>
                             </div>
 
@@ -201,24 +179,23 @@ const Home: React.FC<HomeProps> = ({ categories, featuredProducts, banners, newA
                                     <Percent className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
                                 </div>
                                 <div>
-                                    <span className="text-base md:text-lg font-bold text-green-600 block sm:inline">Regular Offers</span>
-                                    <p className="text-gray-600 text-xs sm:text-sm mt-1">Save money</p>
+                                    <span className="text-base md:text-lg font-bold text-green-600 block sm:inline">নিয়মিত অফার</span>
+                                    <p className="text-gray-600 text-xs sm:text-sm mt-1">সাশ্রয়ী মূল্যে কেনাকাটা</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Popular Categories - Mobile Responsive */}
+                    {/* ক্যাটাগরি সেকশন */}
                     <div className="mb-6 sm:mb-8 md:mb-12">
                         <div className="flex items-center justify-between mb-3 sm:mb-6">
-                            <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Shop by Category</h2>
+                            <h2 className="text-xl sm:text-2xl font-bold text-gray-800">ক্যাটাগরি</h2>
                             <Link href="/categories" className="text-green-600 hover:text-green-700 flex items-center text-xs sm:text-sm font-medium bg-green-50 px-2 sm:px-4 py-1 sm:py-2 rounded-md">
-                                View All
+                                সব দেখুন
                                 <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
                             </Link>
                         </div>
 
-                        {/* Mobile-friendly grid for categories */}
                         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-4">
                             {categories.slice(0, 6).map((category) => (
                                 <Link
@@ -242,17 +219,16 @@ const Home: React.FC<HomeProps> = ({ categories, featuredProducts, banners, newA
                         </div>
                     </div>
 
-                    {/* Featured Products - Mobile Responsive */}
+                    {/* জনপ্রিয় পণ্যসমূহ */}
                     <div className="mb-6 sm:mb-8 md:mb-12">
                         <div className="flex items-center justify-between mb-3 sm:mb-6">
-                            <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Featured Products</h2>
+                            <h2 className="text-xl sm:text-2xl font-bold text-gray-800">জনপ্রিয় পণ্যসমূহ</h2>
                             <Link href="/products/featured" className="text-green-600 hover:text-green-700 flex items-center text-xs sm:text-sm font-medium bg-green-50 px-2 sm:px-4 py-1 sm:py-2 rounded-md">
-                                View All
+                                সব দেখুন
                                 <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
                             </Link>
                         </div>
 
-                        {/* Mobile-friendly grid for products */}
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
                             {featuredProducts.map((product) => (
                                 <ProductCard
@@ -269,25 +245,25 @@ const Home: React.FC<HomeProps> = ({ categories, featuredProducts, banners, newA
                         </div>
                     </div>
 
-                    {/* Download App Section - Mobile Responsive */}
+                    {/* অ্যাপ ডাউনলোড সেকশন */}
                     <div className="bg-gradient-to-r from-green-600 to-green-500 rounded-xl shadow-md mb-6 sm:mb-8 md:mb-12 overflow-hidden">
                         <div className="flex flex-col md:flex-row items-center">
                             <div className="w-full md:w-1/2 p-4 sm:p-6 md:p-8">
-                                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-2 sm:mb-4">Download Our App</h2>
-                                <p className="text-green-50 text-sm sm:text-base mb-3 sm:mb-6">Shop groceries anytime, anywhere with our mobile app. Get exclusive app-only offers.</p>
+                                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-2 sm:mb-4">আমাদের অ্যাপ ডাউনলোড করুন</h2>
+                                <p className="text-green-50 text-sm sm:text-base mb-3 sm:mb-6">যেকোনো সময়, যেকোনো স্থান থেকে অর্ডার করুন আমাদের মোবাইল অ্যাপের মাধ্যমে। পান বিশেষ অফার ও ডিসকাউন্ট।</p>
                                 <div className="flex flex-wrap gap-2 sm:gap-4">
                                     <a href="#" className="inline-block transition-transform hover:scale-105">
-                                        <img src="/assets/app-store-badge.png" alt="Download on App Store" className="h-8 sm:h-10 md:h-12" />
+                                        <img src="/assets/app-store-badge.png" alt="অ্যাপ স্টোর থেকে ডাউনলোড করুন" className="h-8 sm:h-10 md:h-12" />
                                     </a>
                                     <a href="#" className="inline-block transition-transform hover:scale-105">
-                                        <img src="/assets/google-play-badge.png" alt="Get it on Google Play" className="h-8 sm:h-10 md:h-12" />
+                                        <img src="/assets/google-play-badge.png" alt="গুগল প্লে থেকে ডাউনলোড করুন" className="h-8 sm:h-10 md:h-12" />
                                     </a>
                                 </div>
                             </div>
                             <div className="w-full md:w-1/2 p-4 flex justify-center">
                                 <img
                                     src="/assets/app-mockup.png"
-                                    alt="Mobile App"
+                                    alt="মোবাইল অ্যাপ"
                                     className="max-w-[200px] sm:max-w-xs transform -rotate-6 shadow-xl rounded-xl"
                                     loading="lazy"
                                 />
@@ -295,9 +271,9 @@ const Home: React.FC<HomeProps> = ({ categories, featuredProducts, banners, newA
                         </div>
                     </div>
 
-                    {/* Mobile-only category quick access */}
+                    {/* শুধু মোবাইলে দেখা যাবে এমন ক্যাটাগরি */}
                     <div className="sm:hidden mb-6">
-                        <h2 className="text-xl font-bold text-gray-800 mb-3">Quick Shop</h2>
+                        <h2 className="text-xl font-bold text-gray-800 mb-3">দ্রুত কেনাকাটা</h2>
                         <div className="grid grid-cols-2 gap-3">
                             {categories.slice(0, 4).map((category) => (
                                 <Link
@@ -320,7 +296,7 @@ const Home: React.FC<HomeProps> = ({ categories, featuredProducts, banners, newA
                                     <div>
                                         <span className="text-sm font-medium">{category.name}</span>
                                         <div className="text-green-500 text-xs flex items-center">
-                                            Shop now
+                                            কেনাকাটা করুন
                                             <ArrowRight className="w-3 h-3 ml-1" />
                                         </div>
                                     </div>
@@ -331,14 +307,14 @@ const Home: React.FC<HomeProps> = ({ categories, featuredProducts, banners, newA
                 </div>
             </div>
 
-            {/* Footer with improved mobile design */}
+            {/* ফুটার */}
             <footer className="bg-white shadow-md border-t border-gray-200 pt-8 sm:pt-12 pb-6">
                 <div className="max-w-7xl mx-auto px-4">
-                    {/* Mobile Footer Accordion */}
+                    {/* মোবাইল ফুটার অ্যাকোর্ডিয়ন */}
                     <div className="md:hidden mb-8">
                         <details className="group mb-3 border-b border-gray-200 pb-3">
                             <summary className="flex justify-between items-center cursor-pointer list-none">
-                                <h3 className="text-base font-semibold text-gray-800">Customer Service</h3>
+                                <h3 className="text-base font-semibold text-gray-800">গ্রাহক সেবা</h3>
                                 <span className="transition group-open:rotate-180">
                                     <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -346,16 +322,16 @@ const Home: React.FC<HomeProps> = ({ categories, featuredProducts, banners, newA
                                 </span>
                             </summary>
                             <ul className="mt-3 space-y-3 px-2">
-                                <li><Link href="/contact" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>Contact Us</Link></li>
-                                <li><Link href="/faq" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>FAQs</Link></li>
-                                <li><Link href="/page/shipping-policy" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>Shipping</Link></li>
-                                <li><Link href="/page/return-policy" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>Returns & Refunds</Link></li>
+                                <li><Link href="/contact" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>যোগাযোগ করুন</Link></li>
+                                <li><Link href="/faq" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>সাধারণ জিজ্ঞাসা</Link></li>
+                                <li><Link href="/page/shipping-policy" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>ডেলিভারি নীতি</Link></li>
+                                <li><Link href="/page/return-policy" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>ফেরত নীতি</Link></li>
                             </ul>
                         </details>
 
                         <details className="group mb-3 border-b border-gray-200 pb-3">
                             <summary className="flex justify-between items-center cursor-pointer list-none">
-                                <h3 className="text-base font-semibold text-gray-800">About Us</h3>
+                                <h3 className="text-base font-semibold text-gray-800">আমাদের সম্পর্কে</h3>
                                 <span className="transition group-open:rotate-180">
                                     <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -363,16 +339,16 @@ const Home: React.FC<HomeProps> = ({ categories, featuredProducts, banners, newA
                                 </span>
                             </summary>
                             <ul className="mt-3 space-y-3 px-2">
-                                <li><Link href="/page/about-us" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>Our Story</Link></li>
-                                <li><Link href="/blog" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>Blog</Link></li>
-                                <li><Link href="/careers" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>Careers</Link></li>
-                                <li><Link href="/page/privacy-policy" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>Privacy Policy</Link></li>
+                                <li><Link href="/page/about-us" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>আমাদের গল্প</Link></li>
+                                <li><Link href="/blog" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>ব্লগ</Link></li>
+                                <li><Link href="/careers" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>ক্যারিয়ার</Link></li>
+                                <li><Link href="/page/privacy-policy" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>গোপনীয়তা নীতি</Link></li>
                             </ul>
                         </details>
 
                         <details className="group mb-3 border-b border-gray-200 pb-3">
                             <summary className="flex justify-between items-center cursor-pointer list-none">
-                                <h3 className="text-base font-semibold text-gray-800">For Business</h3>
+                                <h3 className="text-base font-semibold text-gray-800">ব্যবসায়িক সুযোগ</h3>
                                 <span className="transition group-open:rotate-180">
                                     <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -380,43 +356,43 @@ const Home: React.FC<HomeProps> = ({ categories, featuredProducts, banners, newA
                                 </span>
                             </summary>
                             <ul className="mt-3 space-y-3 px-2">
-                                <li><Link href="/corporate" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>Corporate Orders</Link></li>
-                                <li><Link href="/wholesale" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>Wholesale</Link></li>
-                                <li><Link href="/partnership" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>Partnership</Link></li>
+                                <li><Link href="/corporate" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>কর্পোরেট অর্ডার</Link></li>
+                                <li><Link href="/wholesale" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>পাইকারি ক্রয়</Link></li>
+                                <li><Link href="/partnership" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>পার্টনারশিপ</Link></li>
                             </ul>
                         </details>
                     </div>
 
-                    {/* Desktop Footer Layout */}
+                    {/* ডেস্কটপ ফুটার লেআউট */}
                     <div className="hidden md:grid md:grid-cols-4 gap-8">
                         <div>
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">Customer Service</h3>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">গ্রাহক সেবা</h3>
                             <ul className="space-y-3">
-                                <li><Link href="/contact" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>Contact Us</Link></li>
-                                <li><Link href="/faq" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>FAQs</Link></li>
-                                <li><Link href="/page/shipping-policy" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>Shipping Information</Link></li>
-                                <li><Link href="/page/return-policy" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>Returns & Refunds</Link></li>
+                                <li><Link href="/contact" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>যোগাযোগ করুন</Link></li>
+                                <li><Link href="/faq" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>সাধারণ জিজ্ঞাসা</Link></li>
+                                <li><Link href="/page/shipping-policy" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>ডেলিভারি তথ্য</Link></li>
+                                <li><Link href="/page/return-policy" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>ফেরত ও রিফান্ড</Link></li>
                             </ul>
                         </div>
                         <div>
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">About Us</h3>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">আমাদের সম্পর্কে</h3>
                             <ul className="space-y-3">
-                                <li><Link href="/page/about-us" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>Our Story</Link></li>
-                                <li><Link href="/blog" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>Blog</Link></li>
-                                <li><Link href="/careers" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>Careers</Link></li>
-                                <li><Link href="/page/privacy-policy" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>Privacy Policy</Link></li>
+                                <li><Link href="/page/about-us" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>আমাদের গল্প</Link></li>
+                                <li><Link href="/blog" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>ব্লগ</Link></li>
+                                <li><Link href="/careers" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>ক্যারিয়ার</Link></li>
+                                <li><Link href="/page/privacy-policy" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>গোপনীয়তা নীতি</Link></li>
                             </ul>
                         </div>
                         <div>
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">For Business</h3>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">ব্যবসায়িক সুযোগ</h3>
                             <ul className="space-y-3">
-                                <li><Link href="/corporate" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>Corporate Orders</Link></li>
-                                <li><Link href="/wholesale" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>Wholesale</Link></li>
-                                <li><Link href="/partnership" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>Partnership</Link></li>
+                                <li><Link href="/corporate" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>কর্পোরেট অর্ডার</Link></li>
+                                <li><Link href="/wholesale" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>পাইকারি ক্রয়</Link></li>
+                                <li><Link href="/partnership" className="text-gray-600 hover:text-green-500 flex items-center"><span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>পার্টনারশিপ</Link></li>
                             </ul>
                         </div>
                         <div>
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">Connect With Us</h3>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">আমাদের সাথে যোগাযোগ</h3>
                             <div className="flex space-x-4 mb-6">
                                 <a href="#" className="bg-gray-100 hover:bg-green-100 p-2 rounded-full text-gray-600 hover:text-green-600 transition-colors">
                                     <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg>
@@ -432,19 +408,19 @@ const Home: React.FC<HomeProps> = ({ categories, featuredProducts, banners, newA
                                 </a>
                             </div>
 
-                            <h4 className="font-semibold mb-4">Payment Methods</h4>
+                            <h4 className="font-semibold mb-4">পেমেন্ট পদ্ধতি</h4>
                             <div className="flex flex-wrap gap-3 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                <img src="/assets/visa.png" alt="Visa" className="h-8" loading="lazy" />
-                                <img src="/assets/mastercard.png" alt="Mastercard" className="h-8" loading="lazy" />
-                                <img src="/assets/bkash.png" alt="bKash" className="h-8" loading="lazy" />
-                                <img src="/assets/nagad.png" alt="Nagad" className="h-8" loading="lazy" />
+                                <img src="/assets/visa.png" alt="ভিসা" className="h-8" loading="lazy" />
+                                <img src="/assets/mastercard.png" alt="মাস্টারকার্ড" className="h-8" loading="lazy" />
+                                <img src="/assets/bkash.png" alt="বিকাশ" className="h-8" loading="lazy" />
+                                <img src="/assets/nagad.png" alt="নগদ" className="h-8" loading="lazy" />
                             </div>
                         </div>
                     </div>
 
-                    {/* Mobile social and payment */}
+                    {/* মোবাইলে সোশ্যাল ও পেমেন্ট */}
                     <div className="md:hidden mb-6">
-                        <h3 className="text-base font-semibold text-gray-800 mb-3 border-b border-gray-200 pb-2">Connect With Us</h3>
+                        <h3 className="text-base font-semibold text-gray-800 mb-3 border-b border-gray-200 pb-2">আমাদের সাথে যোগাযোগ</h3>
                         <div className="flex space-x-4 mb-4 justify-center">
                             <a href="#" className="bg-gray-100 hover:bg-green-100 p-2 rounded-full text-gray-600 hover:text-green-600 transition-colors">
                                 <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg>
@@ -460,17 +436,17 @@ const Home: React.FC<HomeProps> = ({ categories, featuredProducts, banners, newA
                             </a>
                         </div>
 
-                        <h4 className="font-semibold mb-2 text-center">Payment Methods</h4>
+                        <h4 className="font-semibold mb-2 text-center">পেমেন্ট পদ্ধতি</h4>
                         <div className="flex flex-wrap gap-2 bg-gray-50 p-2 rounded-lg border border-gray-100 justify-center">
-                            <img src="/assets/visa.png" alt="Visa" className="h-6 sm:h-8" loading="lazy" />
-                            <img src="/assets/mastercard.png" alt="Mastercard" className="h-6 sm:h-8" loading="lazy" />
-                            <img src="/assets/bkash.png" alt="bKash" className="h-6 sm:h-8" loading="lazy" />
-                            <img src="/assets/nagad.png" alt="Nagad" className="h-6 sm:h-8" loading="lazy" />
+                            <img src="/assets/visa.png" alt="ভিসা" className="h-6 sm:h-8" loading="lazy" />
+                            <img src="/assets/mastercard.png" alt="মাস্টারকার্ড" className="h-6 sm:h-8" loading="lazy" />
+                            <img src="/assets/bkash.png" alt="বিকাশ" className="h-6 sm:h-8" loading="lazy" />
+                            <img src="/assets/nagad.png" alt="নগদ" className="h-6 sm:h-8" loading="lazy" />
                         </div>
                     </div>
 
                     <div className="mt-6 md:mt-10 pt-4 md:pt-6 border-t border-gray-200 text-center">
-                        <p className="text-gray-600 text-xs sm:text-sm">© {new Date().getFullYear()} {settings?.store_name}. All rights reserved.</p>
+                        <p className="text-gray-600 text-xs sm:text-sm">© {new Date().getFullYear()} {settings?.store_name}। সর্বসত্ব সংরক্ষিত।</p>
                     </div>
                 </div>
             </footer>

@@ -8,6 +8,7 @@ use App\Models\OrderItem;
 use App\Models\Cart;
 use App\Models\Coupon;
 use App\Models\Area;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,7 @@ use Inertia\Inertia;
 
 class OrderController extends Controller
 {
-/**
+    /**
      * Display a listing of the user's orders
      */
     public function index()
@@ -80,9 +81,17 @@ class OrderController extends Controller
             'area' => 'required|string',
             'payment_method' => 'required|string|in:cash_on_delivery,online_payment',
             'notes' => 'nullable|string',
+            'cart_items' => 'nullable|array',
+            'cart_items.*.product_id' => 'required|integer|exists:products,id',
+            'cart_items.*.quantity' => 'required|integer|min:1',
+            'cart_items.*.price' => 'nullable|numeric',
         ]);
 
-        // Check if the cart is not empty
+        // Check if we have cart items from frontend or backend
+        $hasCartItems = false;
+        $cartItems = [];
+
+        // First try to get cart from database
         $cart = Cart::where(function ($query) {
             if (auth()->check()) {
                 $query->where('user_id', auth()->id());
@@ -91,27 +100,49 @@ class OrderController extends Controller
             }
         })->first();
 
-        if (!$cart || $cart->items->isEmpty()) {
+        if ($cart && $cart->items->isNotEmpty()) {
+            $hasCartItems = true;
+            $cart->load('items.product');
+            $cartItems = $cart->items;
+        } elseif ($request->has('cart_items') && !empty($request->cart_items)) {
+            // If no database cart or it's empty, use the frontend cart items
+            $hasCartItems = true;
+
+            // Create temporary cart in memory with items from request
+            $cart = new Cart();
+
+            foreach ($request->cart_items as $item) {
+                $product = Product::find($item['product_id']);
+
+                if (!$product || !$product->is_active) {
+                    return back()->with('error', 'One or more products are no longer available.');
+                }
+
+                if ($product->stock < $item['quantity']) {
+                    return back()->with('error', "Only {$product->stock} units of '{$product->name}' are available.");
+                }
+
+                // Create a cart item (not saved to database)
+                $cartItem = new \stdClass();
+                $cartItem->product_id = $product->id;
+                $cartItem->quantity = $item['quantity'];
+                $cartItem->price = isset($item['price']) ? $item['price'] : ($product->special_price ?? $product->price);
+                $cartItem->subtotal = $cartItem->price * $cartItem->quantity;
+                $cartItem->product = $product;
+
+                $cartItems[] = $cartItem;
+            }
+        }
+
+        if (!$hasCartItems) {
             return back()->with('error', 'Your cart is empty.');
         }
 
-        $cart->load('items.product');
-
-        // Check if all products are still available and in stock
-        foreach ($cart->items as $item) {
-            $product = $item->product;
-
-            if (!$product->is_active) {
-                return back()->with('error', "Product '{$product->name}' is no longer available.");
-            }
-
-            if ($product->stock < $item->quantity) {
-                return back()->with('error', "Only {$product->stock} units of '{$product->name}' are available.");
-            }
-        }
-
         // Calculate total amount
-        $totalAmount = $cart->total_amount;
+        $totalAmount = 0;
+        foreach ($cartItems as $item) {
+            $totalAmount += ($item->price * $item->quantity);
+        }
 
         // Apply coupon discount if any
         $couponCode = session('coupon_code');
@@ -164,22 +195,24 @@ class OrderController extends Controller
             ]);
 
             // Create order items and update product stock
-            foreach ($cart->items as $item) {
+            foreach ($cartItems as $item) {
                 OrderItem::create([
                     'order_id' => $order->id,
                     'product_id' => $item->product_id,
                     'quantity' => $item->quantity,
                     'price' => $item->price,
-                    'subtotal' => $item->subtotal,
+                    'subtotal' => $item->price * $item->quantity,
                 ]);
 
                 // Decrease product stock
                 $item->product->decrement('stock', $item->quantity);
             }
 
-            // Clear the cart
-            $cart->items()->delete();
-            $cart->updateTotal();
+            // Clear the cart if it's a database cart
+            if ($cart && isset($cart->id)) {
+                $cart->items()->delete();
+                $cart->updateTotal();
+            }
 
             // Clear coupon
             session()->forget('coupon_code');
@@ -192,7 +225,7 @@ class OrderController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Order placement error: ' . $e->getMessage());
-            return back()->with('error', 'An error occurred while placing your order. Please try again.');
+            return back()->with('error', 'An error occurred while placing your order: ' . $e->getMessage());
         }
     }
 }
